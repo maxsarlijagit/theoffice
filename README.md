@@ -16,27 +16,48 @@ Los equipos remotos tienen un espacio de presencia ambient donde ver a sus coleg
 
 ## Tech Stack
 
-- Backend: Node.js + WebSockets
-- Frontend: Canvas 2D / Phaser
-- Hosting: Railway / VPS
+- Backend: Node.js + WebSockets (Railway)
+- Frontend: Canvas 2D
+- Hosting: Railway
 
 ## Roadmap
 
-### Milestone 1: Prototipo
-- [ ] Servidor WebSocket básico
-- [ ] Cliente Canvas con mapa tile
-- [ ] Movimiento de personaje
-- [ ] Sincronización de posiciones
+### Milestone 1: ✅ Prototipo (COMPLETO)
+- [x] Servidor WebSocket básico
+- [x] Cliente Canvas con mapa tile
+- [x] Movimiento de personaje
+- [x] Multiplayer live en Railway
 
-### Milestone 2: Multiplayer
-- [ ] Múltiples clientes conectados
-- [ ] Presencia en tiempo real
-- [ ] Sistema de zonas
+### Milestone 2: En progreso
+- [ ] **Arte placeholder** → Artists crean sprites temporales
+- [ ] **Sistema decustomización** → Elegir color/avatar
+- [ ] **Música por zona** → Audio embebido o streaming
+- [ ] **Focus Room estado** → Indicador visual "en foco"
 
 ### Milestone 3: Discord Activity
-- [ ] Integración Discord Activity API
-- [ ] Customización de avatar
-- [ ] Música por zona
+- [ ] **Discord Activity API** → Integración oficial
+- [ ] **Rich Presence** → Estado en perfil Discord
+- [ ] **Voice channel sync** → Sincronizar con canales de voz
+
+### Milestone 4: Minijuegos
+- [ ] **Arcade games** → Juegos simples en zona Arcade
+- [ ] **Leaderboards** → Rankings por servidor
+- [ ] **Events** → Eventos periódicos
+
+---
+
+## Assets Needed (placeholder / final)
+
+| Asset | Status | Notas |
+|-------|--------|-------|
+| Sprite base player | 🔴 PENDIENTE | 32x32, capa separable |
+| Sprites zonas | 🔴 PENDIENTE | Fondo tile-based |
+| Iconos UI | 🔴 PENDIENTE | Botones, badges |
+| Música Lo-Fi | 🔴 PENDIENTE | Loop, royalty-free |
+| Música Upbeat | 🔴 PENDIENTE | Loop, royalty-free |
+| SFX movimientos | 🔴 PENDIENTE | Opcional |
+
+---
 
 ## Equipo
 
@@ -50,4 +71,4 @@ Los equipos remotos tienen un espacio de presencia ambient donde ver a sus coleg
 ## Links
 
 - Repo: https://github.com/maxsarlijagit/theoffice
-- Design Bible: `the_office_discord.pdf`
+- Live: https://theoffice-production.up.railway.app
