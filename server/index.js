@@ -12,15 +12,12 @@ const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Servir archivos estáticos
 app.use(express.static(path.join(__dirname, '../client')));
 
-// API endpoint para health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Estado del mundo
 const world = {
   players: new Map(),
   zones: {
@@ -38,7 +35,7 @@ function broadcast(type, data, excludeWs = null) {
   const msg = JSON.stringify({ type, data });
   for (const [ws, pid] of clients) {
     if (ws !== excludeWs && ws.readyState === 1) {
-      ws.send(msg);
+      try { ws.send(msg); } catch(e) { console.log('Error sending:', e.message); }
     }
   }
 }
@@ -54,6 +51,9 @@ function getPlayerState() {
 wss.on('connection', (ws) => {
   console.log('🔌 Nueva conexión');
 
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data);
@@ -66,10 +66,10 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     const playerId = clients.get(ws);
     if (playerId) {
+      console.log(`👋 Player desconectado: ${playerId}`);
       world.players.delete(playerId);
       clients.delete(ws);
       broadcast('player-left', { playerId });
-      console.log(`👋 Player desconectado: ${playerId}`);
     }
   });
 });
@@ -133,7 +133,22 @@ function handleMessage(ws, msg) {
   }
 }
 
+// Heartbeat para detectar conexiones rotas
+setInterval(() => {
+  for (const [ws, pid] of clients) {
+    if (!ws.isAlive) {
+      console.log(`💀 Heartbeat fail: ${pid}`);
+      world.players.delete(pid);
+      clients.delete(ws);
+      broadcast('player-left', { playerId: pid });
+      ws.terminate();
+      continue;
+    }
+    ws.isAlive = false;
+    try { ws.ping(); } catch(e) {}
+  }
+}, 30000);
+
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en https://theoffice-production.up.railway.app`);
-  console.log(`🔌 WebSocket en ws://theoffice-production.up.railway.app`);
+  console.log(`🚀 Servidor en puerto ${PORT}`);
 });
