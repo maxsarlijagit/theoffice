@@ -1,12 +1,28 @@
+import express from 'express';
+import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
-const wss = new WebSocketServer({ port: PORT });
+
+const app = express();
+const server = createServer(app);
+const wss = new WebSocketServer({ server });
+
+// Servir archivos estáticos
+app.use(express.static(path.join(__dirname, '../client')));
+
+// API endpoint para health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 // Estado del mundo
 const world = {
-  players: new Map(), // id -> { x, y, name, color, zone }
+  players: new Map(),
   zones: {
     'open-office': { x: 0, y: 0, width: 10, height: 8, music: 'lofi', spawn: { x: 5, y: 4 } },
     'focus-room': { x: 10, y: 0, width: 4, height: 4, music: 'silence', spawn: { x: 12, y: 2 } },
@@ -16,8 +32,7 @@ const world = {
   }
 };
 
-// Conexiones WebSocket
-const clients = new Map(); // ws -> playerId
+const clients = new Map();
 
 function broadcast(type, data, excludeWs = null) {
   const msg = JSON.stringify({ type, data });
@@ -93,9 +108,8 @@ function handleMessage(ws, msg) {
       if (player && data) {
         let newZone = player.zone;
         
-        // Detectar zona por posición
         for (const [zoneName, zone] of Object.entries(world.zones)) {
-          const { x, y, width, height, spawn } = zone;
+          const { x, y, width, height } = zone;
           if (data.x >= x && data.x < x + width && data.y >= y && data.y < y + height) {
             newZone = zoneName;
             break;
@@ -119,4 +133,7 @@ function handleMessage(ws, msg) {
   }
 }
 
-console.log(`🚀 Servidor corriendo en ws://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en https://theoffice-production.up.railway.app`);
+  console.log(`🔌 WebSocket en ws://theoffice-production.up.railway.app`);
+});
