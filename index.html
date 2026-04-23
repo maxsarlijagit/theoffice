@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Office</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+    }
+    #game-container {
+      position: relative;
+    }
+    canvas {
+      background: #16213e;
+      border-radius: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    #zone-badge {
+      background: rgba(0,0,0,0.6);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    #players-count {
+      background: rgba(0,0,0,0.6);
+      padding: 8px 16px;
+      border-radius: 20px;
+    }
+    #login-modal {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(26, 26, 46, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+    }
+    #login-modal.hidden { display: none; }
+    input {
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: none;
+      background: #0f3460;
+      color: #fff;
+      font-size: 16px;
+      width: 200px;
+    }
+    button {
+      padding: 12px 32px;
+      border-radius: 8px;
+      border: none;
+      background: #e94560;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    button:hover { transform: scale(1.05); }
+    .zone-open-office { background: #4a69bd; }
+    .zone-focus-room { background: #2c3e50; }
+    .zone-cafeteria { background: #e17055; }
+    .zone-arcade { background: #fdcb6e; color: #1a1a2e; }
+    .zone-estudio { background: #a29bfe; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <div id="ui">
+      <div id="zone-badge" class="zone-open-office">Open Office</div>
+      <div id="players-count">👥 0 online</div>
+    </div>
+    <div id="login-modal">
+      <h1>The Office</h1>
+      <input type="text" id="name-input" placeholder="Tu nombre" maxlength="16">
+      <button id="join-btn">Entrar</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const TILE_SIZE = 32;
+
+    // Datos del juego
+    let ws = null;
+    let myId = null;
+    let players = {};
+    let zones = {};
+    let currentZone = 'open-office';
+
+    // Conexión WebSocket
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket('wss://theoffice-production.up.railway.app');
+      
+      ws.onopen = () => console.log('🔌 Conectado');
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        handleMessage(msg);
+      };
+      ws.onclose = () => {
+        console.log('❌ Desconectado');
+        setTimeout(connect, 3000);
+      };
+    }
+
+    function send(type, data) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type, data }));
+      }
+    }
+
+    function handleMessage(msg) {
+      const { type, data } = msg;
+      
+      switch (type) {
+        case 'welcome':
+          myId = data.playerId;
+          players = data.world;
+          zones = data.zones;
+          document.getElementById('login-modal').classList.add('hidden');
+          break;
+          
+        case 'player-joined':
+          players[data.id] = data;
+          break;
+          
+        case 'player-left':
+          delete players[data.playerId];
+          break;
+          
+        case 'player-moved':
+          if (players[data.playerId]) {
+            players[data.playerId].x = data.x;
+            players[data.playerId].y = data.y;
+            if (data.zone) players[data.playerId].zone = data.zone;
+          }
+          break;
+      }
+      
+      updateUI();
+    }
+
+    // Input
+    const keys = {};
+    document.addEventListener('keydown', (e) => keys[e.key] = true);
+    document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+    document.getElementById('join-btn').addEventListener('click', () => {
+      const name = document.getElementById('name-input').value.trim() || 'Player';
+      send('join', { name });
+    });
+
+    // Game loop
+    let lastMove = 0;
+    function update() {
+      if (!myId || !players[myId]) return;
+      
+      const my = players[myId];
+      const speed = 0.15;
+      let dx = 0, dy = 0;
+      
+      if (keys['ArrowUp'] || keys['w']) dy = -speed;
+      if (keys['ArrowDown'] || keys['s']) dy = speed;
+      if (keys['ArrowLeft'] || keys['a']) dx = -speed;
+      if (keys['ArrowRight'] || keys['d']) dx = speed;
+      
+      if (dx !== 0 || dy !== 0) {
+        const now = Date.now();
+        if (now - lastMove > 50) {
+          send('move', { x: my.x + dx, y: my.y + dy });
+          lastMove = now;
+        }
+      }
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Fondo grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      for (let x = 0; x < canvas.width; x += TILE_SIZE) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += TILE_SIZE) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+      
+      // Zonas
+      for (const [name, zone] of Object.entries(zones)) {
+        const { x, y, width, height } = zone;
+        ctx.fillStyle = `rgba(255,255,255,0.03)`;
+        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, width * TILE_SIZE, height * TILE_SIZE);
+        
+        // Label
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.font = '12px sans-serif';
+        ctx.fillText(name, x * TILE_SIZE + 5, y * TILE_SIZE + 15);
+      }
+      
+      // Players
+      for (const [id, p] of Object.entries(players)) {
+        const px = p.x * TILE_SIZE;
+        const py = p.y * TILE_SIZE;
+        
+        // Cuerpo
+        ctx.fillStyle = p.color || '#e94560';
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 16, 12, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Nombre
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, px + 16, py + 36);
+        
+        // Vos mismo
+        if (id === myId) {
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+      
+      requestAnimationFrame(render);
+    }
+
+    function updateUI() {
+      const zone = players[myId]?.zone || 'open-office';
+      const badge = document.getElementById('zone-badge');
+      badge.textContent = zone.replace('-', ' ');
+      badge.className = `zone-${zone}`;
+      
+      const count = Object.keys(players).length;
+      document.getElementById('players-count').textContent = `👥 ${count} online`;
+    }
+
+    // Iniciar
+    connect();
+    setInterval(update, 1000/60);
+    render();
+  </script>
+</body>
+</html>
