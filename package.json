@@ -1,0 +1,16 @@
+{
+  "name": "theoffice",
+  "version": "1.0.0",
+  "description": "The Office - Discord Activity",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0",
+    "uuid": "^9.0.1"
+  }
+}
