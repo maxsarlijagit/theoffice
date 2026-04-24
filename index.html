@@ -419,13 +419,13 @@ const keys = {};
 let debugKeyCount = 0;
 document.addEventListener('keydown', e => {
   if (e.target === document.getElementById('chat-txt')) return;
-  keys[e.key] = true;
+  keys[e.key] = true; keys[e.key.toLowerCase()] = true;
   debugKeyCount++;
   if (debugKeyCount % 100 === 1) console.log("keydown:", e.key, "chatFocused:", chatFocused, "myId:", myId);
 });
 document.addEventListener('keyup', e => {
   if (e.target === document.getElementById('chat-txt')) return;
-  keys[e.key] = false;
+  keys[e.key] = false; keys[e.key.toLowerCase()] = false;
 });
 document.getElementById('chat-txt').addEventListener('focus', () => chatFocused = true);
 document.getElementById('chat-txt').addEventListener('blur', () => chatFocused = false);
@@ -435,7 +435,7 @@ function showToast(msg, duration = 3000) { const t = document.getElementById("to
 function connect() {
   ws = new WebSocket(WS_URL);
   setCount('...');
-  ws.onopen = () => { connected = true; wasConnected = true; reconnectAttempts = 0; setCount(Object.keys(players).length); if (mySessionId) { send('reconnect', { sessionId: mySessionId }); } else { showToast('Conectado'); } };
+  ws.onopen = () => { connected = true; wasConnected = true; reconnectAttempts = 0; setCount(Object.keys(players).length); if (mySessionId) { send('reconnect', { sessionId: mySessionId }); } else { /* waiting */ }; };
   ws.onmessage = e => handle(JSON.parse(e.data));
   ws.onclose = () => { connected = false; setCount('...'); setTimeout(connect, 3000); };
 }
@@ -555,10 +555,10 @@ function update() {
   if (keys['ArrowDown']||keys['s']||keys['S']) dy = spd;
   if (keys['ArrowLeft']||keys['a']||keys['A']) dx = -spd;
   if (keys['ArrowRight']||keys['d']||keys['D']) dx = spd;
-  if (dx || dy) {
+  if (dx !== 0 || dy !== 0) {
     const now = Date.now();
     if (now - lastMove >= MOVE_MS) {
-      send('move', { x: clamp(me.x+dx, 0, WORLD_W-1), y: clamp(me.y+dy, 0, WORLD_H-1) });
+      const nx = clamp(me.x + (dx !== 0 ? Math.sign(dx) * 0.5 : 0), 0, WORLD_W-1); const ny = clamp(me.y + (dy !== 0 ? Math.sign(dy) * 0.5 : 0), 0, WORLD_H-1); if (nx !== me.x || ny !== me.y) send('move', { x: nx, y: ny });
       lastMove = now;
     }
   }
