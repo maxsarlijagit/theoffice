@@ -11,85 +11,171 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
-
 app.use(express.static(path.join(__dirname, '../client')));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', players: world.players.size });
 });
 
-// Player statuses
+// Player status
 const STATUS = { AVAILABLE: 'available', FOCUS: 'focus', MEETING: 'meeting', BREAK: 'break' };
 
+// Map data: 20x17 tiles, each tile 32px
 const zones = {
   'open-office': {
     x: 0, y: 0, width: 10, height: 8,
-    bgColor: '#1a2a4a', music: 'lofi',
+    bgColor: '#0d1b2a', floorColor: '#1b263b', music: 'lofi',
     spawn: { x: 5, y: 4 },
-    objects: [
-      { type: 'desk', x: 2, y: 2, w: 2, h: 1 },
-      { type: 'desk', x: 6, y: 2, w: 2, h: 1 },
-      { type: 'desk', x: 2, y: 5, w: 2, h: 1 },
-      { type: 'desk', x: 6, y: 5, w: 2, h: 1 },
-      { type: 'plant', x: 1, y: 1 },
-      { type: 'plant', x: 9, y: 1 },
-      { type: 'plant', x: 1, y: 6 },
-      { type: 'plant', x: 9, y: 6 }
+    // Tile map: 0=empty, 1=desk, 2=plant, 3=computer, 4=chair, 5=bookshelf
+    tiles: [
+      [0,0,0,0,0,0,0,0,0,0],
+      [0,0,2,0,0,0,0,2,0,0],
+      [0,1,1,1,0,0,1,1,1,0],
+      [0,0,4,0,0,0,0,4,0,0],
+      [0,0,3,0,0,0,0,3,0,0],
+      [0,1,1,1,0,0,1,1,1,0],
+      [0,0,2,0,0,0,0,2,0,0],
+      [0,0,0,0,0,0,0,0,0,0],
     ]
   },
   'focus-room': {
     x: 10, y: 0, width: 4, height: 4,
-    bgColor: '#2d1b1b', music: 'silence',
+    bgColor: '#1a0a0a', floorColor: '#2d1b1b', music: 'silence',
     spawn: { x: 12, y: 2 },
-    objects: [
-      { type: 'desk', x: 11, y: 1, w: 2, h: 1 },
-      { type: 'plant', x: 10, y: 3 }
+    tiles: [
+      [0,0,0,0],
+      [0,2,2,0],
+      [0,1,1,0],
+      [0,0,0,0],
     ]
   },
   'cafeteria': {
     x: 14, y: 0, width: 6, height: 8,
-    bgColor: '#2d2d1b', music: 'upbeat',
+    bgColor: '#1a1a0a', floorColor: '#2d2d1b', music: 'upbeat',
     spawn: { x: 17, y: 4 },
-    objects: [
-      { type: 'table', x: 15, y: 2, w: 2, h: 2 },
-      { type: 'table', x: 18, y: 5, w: 2, h: 2 },
-      { type: 'plant', x: 14, y: 1 },
-      { type: 'plant', x: 19, y: 7 }
+    tiles: [
+      [0,0,0,0,0,0],
+      [0,2,0,0,0,2],
+      [0,0,5,5,0,0],
+      [0,0,0,0,0,0],
+      [0,2,0,0,0,2],
+      [0,0,5,5,0,0],
+      [0,0,0,0,0,0],
+      [0,0,0,0,0,0],
     ]
   },
   'arcade': {
     x: 0, y: 8, width: 8, height: 6,
-    bgColor: '#1b2d1b', music: 'energetic',
+    bgColor: '#0a1a0a', floorColor: '#1b2d1b', music: 'energetic',
     spawn: { x: 4, y: 11 },
-    objects: [
-      { type: 'machine', x: 1, y: 9, w: 1, h: 2 },
-      { type: 'machine', x: 3, y: 9, w: 1, h: 2 },
-      { type: 'machine', x: 5, y: 9, w: 1, h: 2 },
-      { type: 'machine', x: 7, y: 9, w: 1, h: 2 },
-      { type: 'plant', x: 0, y: 8 },
-      { type: 'plant', x: 8, y: 8 }
+    tiles: [
+      [0,0,2,0,0,0,0,2],
+      [0,6,6,0,6,6,0,0],
+      [0,6,6,0,6,6,0,0],
+      [0,0,0,0,0,0,0,0],
+      [0,2,0,0,0,0,2,0],
+      [0,0,0,0,0,0,0,0],
     ]
   },
   'estudio': {
     x: 8, y: 8, width: 6, height: 6,
-    bgColor: '#2d1b2d', music: 'neutral',
+    bgColor: '#1a0a1a', floorColor: '#2d1b2d', music: 'neutral',
     spawn: { x: 11, y: 11 },
-    objects: [
-      { type: 'desk', x: 9, y: 10, w: 2, h: 1 },
-      { type: 'desk', x: 12, y: 10, w: 2, h: 1 },
-      { type: 'plant', x: 8, y: 9 },
-      { type: 'plant', x: 14, y: 9 }
+    tiles: [
+      [0,0,2,2,0,0],
+      [0,1,1,1,1,0],
+      [0,0,4,4,0,0],
+      [0,0,3,3,0,0],
+      [0,1,1,1,1,0],
+      [0,0,2,2,0,0],
     ]
   }
 };
 
-const world = { players: new Map(), zones };
+// Tile sprite definitions (pixelart, drawn procedurally)
+const TILE_SPRITES = {
+  1: { // desk
+    w: 2, h: 1,
+    draw: (ctx, x, y, TILE) => {
+      ctx.fillStyle = '#3d2914';
+      ctx.fillRect(x+2, y+TILE-8, TILE*2-4, 8);
+      ctx.fillStyle = '#4a3520';
+      ctx.fillRect(x+4, y+TILE-6, TILE*2-8, 4);
+    }
+  },
+  2: { // plant
+    w: 1, h: 1,
+    draw: (ctx, x, y, TILE) => {
+      ctx.fillStyle = '#1a4a1a';
+      ctx.beginPath();
+      ctx.ellipse(x+TILE/2, y+TILE/2-2, 10, 8, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#2d6b2d';
+      ctx.beginPath();
+      ctx.ellipse(x+TILE/2+3, y+TILE/2-4, 6, 5, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#4a3020';
+      ctx.fillRect(x+TILE/2-3, y+TILE/2+4, 6, 6);
+    }
+  },
+  3: { // computer
+    w: 1, h: 1,
+    draw: (ctx, x, y, TILE) => {
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(x+8, y+10, 16, 12);
+      ctx.fillStyle = '#4a69bd';
+      ctx.fillRect(x+10, y+12, 12, 8);
+      ctx.fillStyle = '#6a89cc';
+      ctx.fillRect(x+12, y+13, 8, 6);
+      ctx.fillStyle = '#2d2d3d';
+      ctx.fillRect(x+8, y+22, 16, 4);
+    }
+  },
+  4: { // chair
+    w: 1, h: 1,
+    draw: (ctx, x, y, TILE) => {
+      ctx.fillStyle = '#2d2d4a';
+      ctx.fillRect(x+10, y+16, 12, 10);
+      ctx.fillStyle = '#4a4a6a';
+      ctx.fillRect(x+8, y+8, 16, 10);
+      ctx.fillRect(x+10, y+26, 12, 4);
+    }
+  },
+  5: { // table (cafeteria)
+    w: 2, h: 2,
+    draw: (ctx, x, y, TILE) => {
+      ctx.fillStyle = '#3d5a3d';
+      ctx.fillRect(x+2, y+2, TILE*2-4, TILE*2-4);
+      ctx.fillStyle = '#4a6b4a';
+      ctx.fillRect(x+6, y+6, TILE*2-12, TILE*2-12);
+    }
+  },
+  6: { // arcade machine
+    w: 1, h: 2,
+    draw: (ctx, x, y, TILE) => {
+      ctx.fillStyle = '#1a2a4a';
+      ctx.fillRect(x+4, y+4, TILE-8, TILE*2-4);
+      ctx.fillStyle = '#e94560';
+      ctx.fillRect(x+8, y+10, 6, 6);
+      ctx.fillStyle = '#4a69bd';
+      ctx.fillRect(x+8, y+20, 6, 6);
+      ctx.fillStyle = '#0f3460';
+      ctx.fillRect(x+6, y+6, TILE-12, 10);
+    }
+  }
+};
 
-const CLIENT_COLORS = [
-  '#e94560', '#0f3460', '#4a69bd', '#6a89cc',
-  '#78e08f', '#e58e26', '#fa983a', '#eb5757',
-  '#9b59b6', '#1abc9c', '#3498db', '#e74c3c'
+// Player animation frames (pixelart walk cycle)
+const PLAYER_PALETTE = [
+  { skin: '#f5c6a5', shirt: '#e94560', pants: '#2d2d4a', hair: '#3d2314' },
+  { skin: '#8d5524', shirt: '#4a69bd', pants: '#1a1a2e', hair: '#0f0f0f' },
+  { skin: '#f5c6a5', shirt: '#78e08f', pants: '#2d4a2d', hair: '#c4a35a' },
+  { skin: '#c68642', shirt: '#9b59b6', pants: '#2d1b2d', hair: '#1a1a1a' },
+  { skin: '#f5c6a5', shirt: '#e58e26', pants: '#3d2914', hair: '#6b4423' },
+  { skin: '#8d5524', shirt: '#e74c3c', pants: '#2d1b1b', hair: '#2d1b1b' },
 ];
+
+const world = { players: new Map(), zones };
 
 const clients = new Map();
 
@@ -108,14 +194,14 @@ function getPlayerState() {
   return state;
 }
 
-function getNearbyPlayers(playerId, radius = 3) {
-  const player = world.players.get(playerId);
-  if (!player) return [];
+function getNearbyPlayers(pid, radius = 3) {
+  const p = world.players.get(pid);
+  if (!p) return [];
   const nearby = [];
-  for (const [id, p] of world.players) {
-    if (id === playerId) continue;
-    const dist = Math.sqrt((p.x - player.x)**2 + (p.y - player.y)**2);
-    if (dist <= radius) nearby.push({ id, name: p.name, dist, status: p.status });
+  for (const [id, pl] of world.players) {
+    if (id === pid) continue;
+    const dist = Math.sqrt((pl.x - p.x)**2 + (pl.y - p.y)**2);
+    if (dist <= radius) nearby.push({ id, name: pl.name, dist, status: pl.status });
   }
   return nearby;
 }
@@ -127,12 +213,12 @@ function getAudioLevel(dist) {
   return 0;
 }
 
-wss.on('connection', (ws) => {
-  console.log('🔌 Conexión nueva');
+wss.on('connection', ws => {
+  console.log('🔌 Connection');
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
   ws.on('message', data => {
-    try { handleMessage(ws, JSON.parse(data)); } catch(e) {}
+    try { handleMsg(ws, JSON.parse(data)); } catch(e) {}
   });
   ws.on('close', () => {
     const pid = clients.get(ws);
@@ -144,31 +230,31 @@ wss.on('connection', (ws) => {
   });
 });
 
-function handleMessage(ws, msg) {
+function handleMsg(ws, msg) {
   const { type, data } = msg;
   const pid = clients.get(ws);
 
   switch (type) {
     case 'join': {
       const id = uuidv4().slice(0, 8);
-      const colorIdx = world.players.size % CLIENT_COLORS.length;
-      const player = {
+      const paletteIdx = world.players.size % PLAYER_PALETTE.length;
+      const p = {
         id, name: data.name || `Player_${id}`,
-        color: CLIENT_COLORS[colorIdx],
+        paletteIdx,
         x: 5, y: 4, zone: 'open-office',
         status: STATUS.AVAILABLE,
-        avatar: data.avatar || { body: 0, outfit: 0, hair: 0, color: CLIENT_COLORS[colorIdx] },
+        frame: 0, facing: 1,
         lastUpdate: Date.now()
       };
-      world.players.set(id, player);
+      world.players.set(id, p);
       clients.set(ws, id);
       
       ws.send(JSON.stringify({
         type: 'welcome',
-        data: { playerId: id, world: getPlayerState(), zones: world.zones, color: player.color }
+        data: { playerId: id, world: getPlayerState(), zones: world.zones, paletteIdx }
       }));
-      broadcast('player-joined', player);
-      console.log(`👤 ${player.name} joined`);
+      broadcast('player-joined', p);
+      console.log(`👤 ${p.name} joined`);
       break;
     }
     case 'move': {
@@ -181,19 +267,17 @@ function handleMessage(ws, msg) {
             newZone = zName; break;
           }
         }
+        // Update facing based on direction
+        if (data.x !== p.x) p.facing = data.x > p.x ? 1 : -1;
         p.x = data.x; p.y = data.y; p.zone = newZone; p.lastUpdate = Date.now();
         
-        // Broadcast move only (no echo to sender)
-        const moveMsg = JSON.stringify({ type: 'player-moved', data: { playerId: pid, x: data.x, y: data.y, zone: newZone } });
+        const moveMsg = JSON.stringify({ type: 'player-moved', data: { playerId: pid, x: data.x, y: data.y, zone: newZone, facing: p.facing } });
         for (const [ws2, pid2] of clients) {
           if (pid2 !== pid && ws2.readyState === 1) {
             try { ws2.send(moveMsg); } catch(e) {}
           }
         }
-        
-        // Send proximity updates to this player
-        const nearby = getNearbyPlayers(pid);
-        ws.send(JSON.stringify({ type: 'nearby', data: { players: nearby } }));
+        ws.send(JSON.stringify({ type: 'nearby', data: { players: getNearbyPlayers(pid) } }));
       }
       break;
     }
@@ -205,49 +289,42 @@ function handleMessage(ws, msg) {
       }
       break;
     }
+    case 'animate': {
+      const p = world.players.get(pid);
+      if (p && data?.frame !== undefined) {
+        p.frame = data.frame;
+        broadcast('player-animated', { playerId: pid, frame: data.frame });
+      }
+      break;
+    }
     case 'chat': {
       const p = world.players.get(pid);
       if (!p || !data?.text) break;
       const text = data.text.slice(0, 200);
+      const chatMsg = JSON.stringify({ type: 'chat', data: { from: p.name, fromId: pid, text, zone: p.zone, timestamp: Date.now(), audioLevel: 1.0, self: true } });
+      ws.send(chatMsg);
       
-      // Proximity audio levels for nearby players
-      const nearby = getNearbyPlayers(pid);
-      
-      const chatMsg = JSON.stringify({
-        type: 'chat',
-        data: { from: p.name, fromId: pid, text, zone: p.zone, timestamp: Date.now() }
-      });
-      
-      // Send to sender with audio levels
-      ws.send(JSON.stringify({
-        type: 'chat',
-        data: { from: p.name, fromId: pid, text, zone: p.zone, timestamp: Date.now(), audioLevel: 1.0, self: true }
-      }));
-      
-      // Broadcast to nearby
       for (const [ws2, pid2] of clients) {
         if (pid2 !== pid) {
           const other = world.players.get(pid2);
           const dist = Math.sqrt((other.x - p.x)**2 + (other.y - p.y)**2);
-          const audioLevel = getAudioLevel(dist);
           if (dist <= 3) {
-            try {
-              ws2.send(JSON.stringify({
-                type: 'chat',
-                data: { from: p.name, fromId: pid, text, zone: p.zone, timestamp: Date.now(), audioLevel }
-              }));
-            } catch(e) {}
+            try { ws2.send(JSON.stringify({ type: 'chat', data: { from: p.name, fromId: pid, text, zone: p.zone, timestamp: Date.now(), audioLevel: getAudioLevel(dist) } })); } catch(e) {}
           }
         }
       }
       break;
     }
-    case 'ping': {
-      ws.send(JSON.stringify({ type: 'pong', data: { ts: Date.now() } }));
-      break;
-    }
+    case 'ping': ws.send(JSON.stringify({ type: 'pong', data: { ts: Date.now() } })); break;
   }
 }
+
+// Walk animation cycle
+setInterval(() => {
+  for (const [id, p] of world.players) {
+    p.frame = (p.frame + 1) % 4;
+  }
+}, 150);
 
 setInterval(() => {
   for (const [ws, pid] of clients) {
@@ -265,5 +342,5 @@ setInterval(() => {
 }, 30000);
 
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on ${PORT}`);
 });
