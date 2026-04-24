@@ -544,7 +544,7 @@ function updateNearby() {
 function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
 
 function update() {
-  if (!myId || !players[myId] || chatFocused) return;
+  if (!myId || !players[myId] || chatFocused) { if (debugKeyCount % 50 === 1) console.log('update skip: myId=' + myId + ' players[myId]=' + (myId ? (players[myId] ? 'exists' : 'null') : 'no-myId') + ' chatFocused=' + chatFocused); return; }
   // Debug: log if keys are being captured
   const anyKey = Object.values(keys).some(v => v);
   if (anyKey && Math.random() < 0.01) console.log("keys pressed:", JSON.stringify(keys));
