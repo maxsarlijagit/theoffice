@@ -7,120 +7,260 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #1a1a2e;
+      background: #0f0f1a;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: 'Segoe UI', system-ui, sans-serif;
       color: #fff;
+      overflow: hidden;
     }
     #game-container {
       position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
     }
     canvas {
-      background: #16213e;
-      border-radius: 8px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
-    #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
+    #top-bar {
       display: flex;
       justify-content: space-between;
-      pointer-events: none;
+      align-items: center;
+      width: 640px;
+      padding: 0 4px;
     }
     #zone-badge {
-      background: rgba(0,0,0,0.6);
-      padding: 8px 16px;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 20px;
       border-radius: 20px;
       font-weight: 600;
+      font-size: 14px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
     }
-    #players-count {
-      background: rgba(0,0,0,0.6);
+    #status {
+      background: rgba(0,0,0,0.5);
       padding: 8px 16px;
       border-radius: 20px;
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #78e08f;
+    }
+    .status-dot.offline { background: #eb5757; }
+    #players-count {
+      background: rgba(0,0,0,0.5);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+    }
+    #chat-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 500px;
+      max-height: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #chat-messages {
+      background: rgba(0,0,0,0.7);
+      border-radius: 12px;
+      padding: 12px;
+      max-height: 140px;
+      overflow-y: auto;
+      backdrop-filter: blur(8px);
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #chat-messages.visible { display: flex; }
+    .chat-msg {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+    }
+    .chat-msg .name { font-weight: 600; margin-right: 6px; }
+    .chat-msg .text { color: #ddd; }
+    #chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 20px;
+      border: none;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      font-size: 13px;
+      backdrop-filter: blur(8px);
+      outline: none;
+    }
+    #chat-input:focus { background: rgba(0,0,0,0.85); }
+    #chat-send {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      background: #e94560;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    #chat-send:hover { background: #ff6b8a; }
+    #nearby-banner {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 12px;
+      display: none;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    #nearby-banner.visible { display: block; }
     #login-modal {
       position: absolute;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(26, 26, 46, 0.95);
+      background: rgba(15, 15, 26, 0.95);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
+      backdrop-filter: blur(8px);
     }
     #login-modal.hidden { display: none; }
-    input {
-      padding: 12px 20px;
-      border-radius: 8px;
+    #login-modal h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+    }
+    #login-modal p {
+      color: #888;
+      font-size: 14px;
+      max-width: 400px;
+      text-align: center;
+    }
+    #name-input {
+      padding: 14px 24px;
+      border-radius: 12px;
       border: none;
-      background: #0f3460;
+      background: #1a1a2e;
       color: #fff;
       font-size: 16px;
-      width: 200px;
+      width: 240px;
+      text-align: center;
     }
-    button {
-      padding: 12px 32px;
-      border-radius: 8px;
+    #join-btn {
+      padding: 14px 40px;
+      border-radius: 12px;
       border: none;
       background: #e94560;
       color: #fff;
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
-      transition: transform 0.1s;
+      transition: transform 0.1s, background 0.1s;
     }
-    button:hover { transform: scale(1.05); }
-    .zone-open-office { background: #4a69bd; }
-    .zone-focus-room { background: #2c3e50; }
-    .zone-cafeteria { background: #e17055; }
-    .zone-arcade { background: #fdcb6e; color: #1a1a2e; }
-    .zone-estudio { background: #a29bfe; }
+    #join-btn:hover { transform: scale(1.05); background: #ff6b8a; }
+    #controls-hint {
+      color: #555;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
   <div id="game-container">
-    <canvas id="canvas" width="640" height="480"></canvas>
-    <div id="ui">
-      <div id="zone-badge" class="zone-open-office">Open Office</div>
+    <div id="top-bar">
+      <div id="zone-badge">Open Office</div>
+      <div id="status">
+        <span class="status-dot"></span>
+        <span>Conectando...</span>
+      </div>
       <div id="players-count">👥 0 online</div>
+    </div>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <div id="nearby-banner">👥 Jugadores cerca</div>
+    <div id="chat-container">
+      <div id="chat-messages"></div>
+      <div id="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="200" />
+        <button id="chat-send">Enviar</button>
+      </div>
     </div>
     <div id="login-modal">
       <h1>The Office</h1>
-      <input type="text" id="name-input" placeholder="Tu nombre" maxlength="16">
+      <p>Tu oficina virtual dentro de Discord. Muate por las zonas y charlá con quienes estén cerca.</p>
+      <input type="text" id="name-input" placeholder="Tu nombre" maxlength="16" />
       <button id="join-btn">Entrar</button>
+      <div id="controls-hint">WASD o ↑↓←→ para moverse</div>
     </div>
   </div>
 
   <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const TILE_SIZE = 32;
+    const TILE = 32;
+    const WORLD_W = 20;
+    const WORLD_H = 14;
 
-    // Datos del juego
+    // Connection
+    const WS_URL = 'wss://theoffice-production.up.railway.app';
     let ws = null;
     let myId = null;
+    let myColor = '#e94560';
     let players = {};
     let zones = {};
-    let currentZone = 'open-office';
+    let chatMessages = [];
+    let nearbyCount = 0;
+    let connected = false;
 
-    // Conexión WebSocket
+    // Input
+    const keys = {};
+    document.addEventListener('keydown', e => { keys[e.key] = true; });
+    document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+    // WebSocket
     function connect() {
-      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${location.host}`);
+      ws = new WebSocket(WS_URL);
+      setStatus('Conectando...', true);
       
-      ws.onopen = () => console.log('🔌 Conectado');
-      ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-        handleMessage(msg);
+      ws.onopen = () => {
+        connected = true;
+        setStatus('En línea', false);
       };
+      
+      ws.onmessage = e => handleMsg(JSON.parse(e.data));
+      
       ws.onclose = () => {
-        console.log('❌ Desconectado');
+        connected = false;
+        setStatus('Reconectando...', true);
         setTimeout(connect, 3000);
+      };
+      
+      ws.onerror = () => {
+        setStatus('Error de conexión', true);
       };
     }
 
@@ -130,12 +270,19 @@
       }
     }
 
-    function handleMessage(msg) {
+    function setStatus(text, offline) {
+      document.querySelector('#status span:last-child').textContent = text;
+      const dot = document.querySelector('.status-dot');
+      dot.className = 'status-dot' + (offline ? ' offline' : '');
+    }
+
+    function handleMsg(msg) {
       const { type, data } = msg;
       
       switch (type) {
         case 'welcome':
           myId = data.playerId;
+          myColor = data.color;
           players = data.world;
           zones = data.zones;
           document.getElementById('login-modal').classList.add('hidden');
@@ -146,7 +293,7 @@
           break;
           
         case 'player-left':
-          delete players[data.playerId];
+          delete players[data.id];
           break;
           
         case 'player-moved':
@@ -156,107 +303,183 @@
             if (data.zone) players[data.playerId].zone = data.zone;
           }
           break;
+          
+        case 'chat':
+          chatMessages.push(data);
+          if (chatMessages.length > 20) chatMessages.shift();
+          renderChat();
+          break;
       }
-      
       updateUI();
     }
 
-    // Input
-    const keys = {};
-    document.addEventListener('keydown', (e) => keys[e.key] = true);
-    document.addEventListener('keyup', (e) => keys[e.key] = false);
-
-    document.getElementById('join-btn').addEventListener('click', () => {
-      const name = document.getElementById('name-input').value.trim() || 'Player';
-      send('join', { name });
-    });
-
-    // Game loop
-    let lastMove = 0;
-    function update() {
-      if (!myId || !players[myId]) return;
-      
-      const my = players[myId];
-      const speed = 0.15;
-      let dx = 0, dy = 0;
-      
-      if (keys['ArrowUp'] || keys['w']) dy = -speed;
-      if (keys['ArrowDown'] || keys['s']) dy = speed;
-      if (keys['ArrowLeft'] || keys['a']) dx = -speed;
-      if (keys['ArrowRight'] || keys['d']) dx = speed;
-      
-      if (dx !== 0 || dy !== 0) {
-        const now = Date.now();
-        if (now - lastMove > 50) {
-          send('move', { x: my.x + dx, y: my.y + dy });
-          lastMove = now;
-        }
-      }
-    }
-
-    function render() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Fondo grid
-      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-      for (let x = 0; x < canvas.width; x += TILE_SIZE) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-      }
-      for (let y = 0; y < canvas.height; y += TILE_SIZE) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-      }
-      
-      // Zonas
-      for (const [name, zone] of Object.entries(zones)) {
-        const { x, y, width, height } = zone;
-        ctx.fillStyle = `rgba(255,255,255,0.03)`;
-        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, width * TILE_SIZE, height * TILE_SIZE);
-        
-        // Label
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(name, x * TILE_SIZE + 5, y * TILE_SIZE + 15);
-      }
-      
-      // Players
-      for (const [id, p] of Object.entries(players)) {
-        const px = p.x * TILE_SIZE;
-        const py = p.y * TILE_SIZE;
-        
-        // Cuerpo
-        ctx.fillStyle = p.color || '#e94560';
-        ctx.beginPath();
-        ctx.arc(px + 16, py + 16, 12, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Nombre
-        ctx.fillStyle = '#fff';
-        ctx.font = '10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.name, px + 16, py + 36);
-        
-        // Vos mismo
-        if (id === myId) {
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-      }
-      
-      requestAnimationFrame(render);
+    function renderChat() {
+      const el = document.getElementById('chat-messages');
+      el.innerHTML = chatMessages.slice(-8).map(m => 
+        `<div class="chat-msg"><span class="name">${m.from}:</span><span class="text">${m.text}</span></div>`
+      ).join('');
     }
 
     function updateUI() {
       const zone = players[myId]?.zone || 'open-office';
       const badge = document.getElementById('zone-badge');
       badge.textContent = zone.replace('-', ' ');
-      badge.className = `zone-${zone}`;
       
       const count = Object.keys(players).length;
       document.getElementById('players-count').textContent = `👥 ${count} online`;
+      
+      // Nearby count
+      const me = players[myId];
+      if (me) {
+        let nearby = 0;
+        for (const [id, p] of Object.entries(players)) {
+          if (id === myId) continue;
+          const dist = Math.sqrt((p.x - me.x)**2 + (p.y - me.y)**2);
+          if (dist <= 3) nearby++;
+        }
+        nearbyCount = nearby;
+        const banner = document.getElementById('nearby-banner');
+        banner.textContent = nearby > 0 ? `👥 ${nearby} jugador${nearby>1?'es':''} cerca` : '';
+        banner.className = nearby > 0 ? 'visible' : '';
+      }
     }
 
-    // Iniciar
+    // Movement
+    let lastMove = 0;
+    function update() {
+      if (!myId || !players[myId]) return;
+      
+      const me = players[myId];
+      const speed = 0.12;
+      let dx = 0, dy = 0;
+      
+      if (keys['ArrowUp'] || keys['w'] || keys['W']) dy = -speed;
+      if (keys['ArrowDown'] || keys['s'] || keys['S']) dy = speed;
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) dx = -speed;
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) dx = speed;
+      
+      if (dx !== 0 || dy !== 0) {
+        const now = Date.now();
+        if (now - lastMove > 40) {
+          send('move', { x: me.x + dx, y: me.y + dy });
+          lastMove = now;
+        }
+      }
+    }
+
+    // Render
+    function render() {
+      // Background por zona
+      const me = players[myId];
+      const currentZone = me?.zone || 'open-office';
+      const bgColor = zones[currentZone]?.bgColor || '#1a2a4a';
+      
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      for (let x = 0; x < canvas.width; x += TILE) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += TILE) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+      
+      // Zone separators
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 2;
+      for (const [name, zone] of Object.entries(zones)) {
+        const { x, y, width, height, bgColor: zc } = zone;
+        
+        // Zone background tint
+        ctx.fillStyle = zc + '33';
+        ctx.fillRect(x * TILE, y * TILE, width * TILE, height * TILE);
+        
+        // Border
+        ctx.strokeRect(x * TILE, y * TILE, width * TILE, height * TILE);
+        
+        // Zone label
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(name.replace('-', ' ').toUpperCase(), x * TILE + 6, y * TILE + 16);
+      }
+      
+      // Players
+      for (const [id, p] of Object.entries(players)) {
+        const px = p.x * TILE;
+        const py = p.y * TILE;
+        const isMe = id === myId;
+        
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(px + 16, py + 28, 10, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Body (rectangle)
+        ctx.fillStyle = p.color || '#e94560';
+        ctx.fillRect(px + 8, py + 10, 16, 16);
+        
+        // Head (circle)
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 8, 6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Outline for self
+        if (isMe) {
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(px + 6, py + 8, 20, 20);
+        }
+        
+        // Name tag
+        ctx.fillStyle = isMe ? '#fff' : 'rgba(255,255,255,0.8)';
+        ctx.font = isMe ? 'bold 10px sans-serif' : '9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, px + 16, py + 34);
+        
+        // Proximity ring (when nearby)
+        if (!isMe && me) {
+          const dist = Math.sqrt((p.x - me.x)**2 + (p.y - me.y)**2);
+          if (dist <= 3) {
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(px + 16, py + 16, 20, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+      }
+      
+      requestAnimationFrame(render);
+    }
+
+    // Chat
+    document.getElementById('chat-send').addEventListener('click', () => {
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+      if (text && connected) {
+        send('chat', { text });
+        input.value = '';
+      }
+    });
+    
+    document.getElementById('chat-input').addEventListener('keypress', e => {
+      if (e.key === 'Enter') {
+        document.getElementById('chat-send').click();
+      }
+    });
+
+    // Join
+    document.getElementById('join-btn').addEventListener('click', () => {
+      const name = document.getElementById('name-input').value.trim() || 'Player';
+      if (connected) {
+        send('join', { name });
+      }
+    });
+
+    // Start
     connect();
     setInterval(update, 1000/60);
     render();
