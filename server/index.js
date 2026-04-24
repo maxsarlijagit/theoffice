@@ -15,27 +15,62 @@ const wss = new WebSocketServer({ server });
 app.use(express.static(path.join(__dirname, '../client')));
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', players: world.players.size });
 });
+
+// Zona definitions
+const zones = {
+  'open-office': { 
+    x: 0, y: 0, width: 10, height: 8, 
+    music: 'lofi', 
+    bgColor: '#1a2a4a',
+    spawn: { x: 5, y: 4 } 
+  },
+  'focus-room': { 
+    x: 10, y: 0, width: 4, height: 4, 
+    music: 'silence', 
+    bgColor: '#2d1b1b',
+    spawn: { x: 12, y: 2 } 
+  },
+  'cafeteria': { 
+    x: 14, y: 0, width: 6, height: 8, 
+    music: 'upbeat', 
+    bgColor: '#2d2d1b',
+    spawn: { x: 17, y: 4 } 
+  },
+  'arcade': { 
+    x: 0, y: 8, width: 8, height: 6, 
+    music: 'energetic', 
+    bgColor: '#1b2d1b',
+    spawn: { x: 4, y: 11 } 
+  },
+  'estudio': { 
+    x: 8, y: 8, width: 6, height: 6, 
+    music: 'neutral', 
+    bgColor: '#2d1b2d',
+    spawn: { x: 11, y: 11 } 
+  }
+};
 
 const world = {
   players: new Map(),
-  zones: {
-    'open-office': { x: 0, y: 0, width: 10, height: 8, music: 'lofi', spawn: { x: 5, y: 4 } },
-    'focus-room': { x: 10, y: 0, width: 4, height: 4, music: 'silence', spawn: { x: 12, y: 2 } },
-    'cafeteria': { x: 14, y: 0, width: 6, height: 8, music: 'upbeat', spawn: { x: 17, y: 4 } },
-    'arcade': { x: 0, y: 8, width: 8, height: 6, music: 'energetic', spawn: { x: 4, y: 11 } },
-    'estudio': { x: 8, y: 8, width: 6, height: 6, music: 'neutral', spawn: { x: 11, y: 11 } }
-  }
+  zones
 };
 
 const clients = new Map();
 
+// Player palette
+const PLAYER_COLORS = [
+  '#e94560', '#0f3460', '#4a69bd', '#6a89cc',
+  '#78e08f', '#e58e26', '#fa983a', '#eb5757',
+  '#9b59b6', '#1abc9c', '#3498db', '#e74c3c'
+];
+
 function broadcast(type, data, excludeWs = null) {
   const msg = JSON.stringify({ type, data });
-  for (const [ws, pid] of clients) {
+  for (const [ws] of clients) {
     if (ws !== excludeWs && ws.readyState === 1) {
-      try { ws.send(msg); } catch(e) { console.log('Error sending:', e.message); }
+      try { ws.send(msg); } catch(e) {}
     }
   }
 }
@@ -46,6 +81,24 @@ function getPlayerState() {
     state[id] = player;
   }
   return state;
+}
+
+function getNearbyPlayers(playerId, radius = 3) {
+  const player = world.players.get(playerId);
+  if (!player) return [];
+  
+  const nearby = [];
+  const px = player.x;
+  const py = player.y;
+  
+  for (const [id, p] of world.players) {
+    if (id === playerId) continue;
+    const dist = Math.sqrt((p.x - px) ** 2 + (p.y - py) ** 2);
+    if (dist <= radius) {
+      nearby.push({ id, name: p.name, distance: dist });
+    }
+  }
+  return nearby;
 }
 
 wss.on('connection', (ws) => {
@@ -76,37 +129,44 @@ wss.on('connection', (ws) => {
 
 function handleMessage(ws, msg) {
   const { type, data } = msg;
+  const playerId = clients.get(ws);
 
   switch (type) {
     case 'join': {
-      const playerId = uuidv4().slice(0, 8);
+      const id = uuidv4().slice(0, 8);
+      const colorIndex = world.players.size % PLAYER_COLORS.length;
       const player = {
-        id: playerId,
-        name: data.name || `Player_${playerId}`,
-        color: data.color || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
+        id,
+        name: data.name || `Player_${id}`,
+        color: PLAYER_COLORS[colorIndex],
         x: 5,
         y: 4,
         zone: 'open-office',
         lastUpdate: Date.now()
       };
-      world.players.set(playerId, player);
-      clients.set(ws, playerId);
+      world.players.set(id, player);
+      clients.set(ws, id);
       
+      // Send welcome with full state + zones
       ws.send(JSON.stringify({
         type: 'welcome',
-        data: { playerId, world: getPlayerState(), zones: world.zones }
+        data: { 
+          playerId: id, 
+          world: getPlayerState(), 
+          zones: world.zones,
+          color: player.color
+        }
       }));
       
       broadcast('player-joined', player);
-      console.log(`👤 Player joined: ${player.name} (${playerId})`);
+      console.log(`👤 ${player.name} joined (${id})`);
       break;
     }
 
     case 'move': {
-      const playerId = clients.get(ws);
-      const player = world.players.get(playerId);
-      if (player && data) {
-        let newZone = player.zone;
+      const p = world.players.get(playerId);
+      if (p && data) {
+        let newZone = p.zone;
         
         for (const [zoneName, zone] of Object.entries(world.zones)) {
           const { x, y, width, height } = zone;
@@ -116,12 +176,47 @@ function handleMessage(ws, msg) {
           }
         }
         
-        player.x = data.x;
-        player.y = data.y;
-        player.zone = newZone;
-        player.lastUpdate = Date.now();
+        p.x = data.x;
+        p.y = data.y;
+        p.zone = newZone;
+        p.lastUpdate = Date.now();
         
         broadcast('player-moved', { playerId, x: data.x, y: data.y, zone: newZone });
+      }
+      break;
+    }
+
+    case 'chat': {
+      const p = world.players.get(playerId);
+      if (!p || !data.text) break;
+      
+      const text = data.text.slice(0, 200);
+      
+      // Send to nearby players
+      const nearby = getNearbyPlayers(playerId);
+      const nearbyMsg = JSON.stringify({
+        type: 'chat',
+        data: {
+          from: p.name,
+          fromId: playerId,
+          text,
+          zone: p.zone,
+          timestamp: Date.now()
+        }
+      });
+      
+      // Send to sender too
+      ws.send(nearbyMsg);
+      
+      // Broadcast to nearby (excluding sender handled by proximity)
+      for (const [ws2, pid] of clients) {
+        if (pid !== playerId) {
+          const otherPlayer = world.players.get(pid);
+          const dist = Math.sqrt((otherPlayer.x - p.x) ** 2 + (otherPlayer.y - p.y) ** 2);
+          if (dist <= 3) {
+            try { ws2.send(nearbyMsg); } catch(e) {}
+          }
+        }
       }
       break;
     }
@@ -133,14 +228,15 @@ function handleMessage(ws, msg) {
   }
 }
 
-// Heartbeat para detectar conexiones rotas
+// Heartbeat
 setInterval(() => {
   for (const [ws, pid] of clients) {
     if (!ws.isAlive) {
       console.log(`💀 Heartbeat fail: ${pid}`);
+      const p = world.players.get(pid);
       world.players.delete(pid);
       clients.delete(ws);
-      broadcast('player-left', { playerId: pid });
+      if (p) broadcast('player-left', { playerId: pid });
       ws.terminate();
       continue;
     }
@@ -150,5 +246,6 @@ setInterval(() => {
 }, 30000);
 
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor en puerto ${PORT}`);
+  console.log(`🚀 The Office server running on port ${PORT}`);
+  console.log(`🌐 https://theoffice-production.up.railway.app`);
 });
