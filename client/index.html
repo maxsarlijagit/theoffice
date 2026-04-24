@@ -662,7 +662,7 @@ document.getElementById('login-btn').addEventListener('click', () => {
   if (connected) send('join', { name });
 });
 
-connect();
+document.getElementById('chat-toggle').addEventListener('click', () => { document.getElementById('chat-panel').classList.remove('hidden'); document.getElementById('chat-txt').focus(); });connect();
 setInterval(update, 1000/60);
 render();
   </script>
