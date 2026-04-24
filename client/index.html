@@ -246,7 +246,10 @@ function update() {
   const ny = Math.max(0, Math.min(WORLD_H - 1, Math.round(me.y + dy * 0.5)));
   
   if (nx !== me.x || ny !== me.y) {
-    console.log("SEND MOVE:", {x: nx, y: ny, readyState: ws.readyState}); send('move', { x: nx, y: ny });
+    console.log("SEND MOVE:", {x: nx, y: ny, readyState: ws.readyState}); // Optimistic update: move locally immediately
+      players[myId].x = nx;
+      players[myId].y = ny;
+      send('move', { x: nx, y: ny });
     lastMove = now;
   }
 }
