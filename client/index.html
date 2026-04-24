@@ -416,110 +416,11 @@ let lastMove = 0;
 let nearbyPlayers = [];
 
 const keys = {};
-let debugKeyCount = 0;
 document.addEventListener('keydown', e => {
   if (e.target === document.getElementById('chat-txt')) return;
   keys[e.key] = true; keys[e.key.toLowerCase()] = true;
   debugKeyCount++;
-  if (debugKeyCount % 100 === 1) console.log("keydown:", e.key, "chatFocused:", chatFocused, "myId:", myId);
-});
-document.addEventListener('keyup', e => {
-  if (e.target === document.getElementById('chat-txt')) return;
-  keys[e.key] = false; keys[e.key.toLowerCase()] = false;
-});
-document.getElementById('chat-txt').addEventListener('focus', () => chatFocused = true);
-document.getElementById('chat-txt').addEventListener('blur', () => chatFocused = false);
-
-function showToast(msg, duration = 3000) { const t = document.getElementById("toast"); if (!t) return; t.textContent = msg; t.style.display = "block"; setTimeout(() => { t.style.display = "none"; }, duration); }
-
-function connect() {
-  ws = new WebSocket(WS_URL);
-  setCount('...');
-  ws.onopen = () => { connected = true; wasConnected = true; reconnectAttempts = 0; setCount(Object.keys(players).length); if (mySessionId) { send('reconnect', { sessionId: mySessionId }); } else { /* waiting */ }; };
-  ws.onmessage = e => handle(JSON.parse(e.data));
-  ws.onclose = () => { connected = false; setCount('...'); setTimeout(connect, 3000); };
-}
-function send(t, d) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: t, data: d })); }
-
-function handle(msg) {
-  const { type, data } = msg;
-  switch (type) {
-    case "error":
-      showToast(data.message || "Error");
-      break;
-    case 'welcome':
-      myId = data.playerId;
-      myColorIdx = data.paletteIdx !== undefined ? data.paletteIdx : 0;
-      players = data.world;
-      zones = data.zones;
-      tileMaps = {};
-      for (const [zName, zone] of Object.entries(zones)) {
-        tileMaps[zName] = zone.tiles || [];
-      }
-      document.getElementById('login').classList.add('hidden');
-      setCount(Object.keys(players).length);
-      break;
-    case 'player-joined': players[data.id] = data; setCount(Object.keys(players).length); break;
-    case 'player-left': delete players[data.playerId]; setCount(Object.keys(players).length); break;
-    case 'player-moved':
-      if (players[data.playerId]) {
-        players[data.playerId].x = data.x;
-        players[data.playerId].y = data.y;
-        if (data.zone) players[data.playerId].zone = data.zone;
-        if (data.facing) players[data.playerId].facing = data.facing;
-      }
-      break;
-    case 'player-status':
-      if (players[data.playerId]) players[data.playerId].status = data.status;
-      break;
-    case 'player-animated':
-      if (players[data.playerId]) players[data.playerId].frame = data.frame;
-      break;
-    case 'nearby':
-      nearbyPlayers = data.players;
-      updateNearby();
-      break;
-    case 'chat':
-      chatMsgs.push(data);
-      if (chatMsgs.length > 30) chatMsgs.shift();
-      lastChatTs = Date.now();
-      showChat(); renderChat();
-      break;
-  }
-  updateHUD();
-}
-
-function setCount(n) {
-  document.getElementById('count-hud').textContent = typeof n === 'number' ? `${n} ONLINE` : n;
-  if (typeof n === 'number' && n >= 0) requestAnimationFrame(() => {}); // refresh
-}
-
-function updateHUD() {
-  const me = players[myId];
-  const zone = me?.zone || 'open-office';
-  const status = me?.status || 'available';
-  
-  document.getElementById('zone-hud').querySelector('span:last-child').textContent = zone.replace('-', ' ').toUpperCase();
-  
-  const statusEl = document.getElementById('my-status');
-  statusEl.querySelector('span:last-child').textContent = STATUS_L[status];
-  statusEl.querySelector('.dot').style.background = STATUS_C[status];
-}
-
-function showChat() {
-  document.getElementById('chat-panel').classList.remove('hidden');
-  setTimeout(() => {
-    if (Date.now() - lastChatTs >= CHAT_HIDE_MS) {
-      document.getElementById('chat-panel').classList.add('hidden');
-    }
-  }, CHAT_HIDE_MS + 1000);
-}
-
-function renderChat() {
-  const el = document.getElementById('chat-log');
-  el.innerHTML = chatMsgs.slice(-10).map(m => {
-    const isSelf = m.fromId === myId;
-    const isLoud = m.audioLevel >= 0.8;
+      const isLoud = m.audioLevel >= 0.8;
     const vol = m.audioLevel >= 0.8 ? '🔊' : m.audioLevel >= 0.4 ? '🔉' : '🔈';
     const cls = isSelf ? 'self' : isLoud ? 'loud' : '';
     return `<div class="msg msg-${cls}"><span class="nm">${m.from}:</span><span class="tx">${m.text}</span>${!isSelf?`<span class="vol">${vol}</span>`:''}</div>`;
@@ -544,21 +445,10 @@ function updateNearby() {
 function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
 
 function update() {
-  if (!myId || !players[myId] || chatFocused) { if (debugKeyCount % 50 === 1) console.log('update skip: myId=' + myId + ' players[myId]=' + (myId ? (players[myId] ? 'exists' : 'null') : 'no-myId') + ' chatFocused=' + chatFocused); return; }
+  if (!myId || !players[myId] || chatFocused) return;
   // Debug: log if keys are being captured
   const anyKey = Object.values(keys).some(v => v);
-  if (anyKey && Math.random() < 0.01) console.log("keys pressed:", JSON.stringify(keys));
-  const me = players[myId];
-  const spd = 0.1;
-  let dx = 0, dy = 0;
-  if (keys['ArrowUp']||keys['w']||keys['W']) dy = -spd;
-  if (keys['ArrowDown']||keys['s']||keys['S']) dy = spd;
-  if (keys['ArrowLeft']||keys['a']||keys['A']) dx = -spd;
-  if (keys['ArrowRight']||keys['d']||keys['D']) dx = spd;
-  if (dx !== 0 || dy !== 0) {
-    const now = Date.now();
-    if (now - lastMove >= MOVE_MS) {
-      const nx = clamp(me.x + (dx !== 0 ? Math.sign(dx) * 0.5 : 0), 0, WORLD_W-1); const ny = clamp(me.y + (dy !== 0 ? Math.sign(dy) * 0.5 : 0), 0, WORLD_H-1); console.log('MOVE attempt: me=' + JSON.stringify({x: me.x, y: me.y}) + ' dx=' + dx + ' dy=' + dy + ' nx=' + nx + ' ny=' + ny + ' connected=' + connected + ' ws.readyState=' + (ws ? ws.readyState : 'null')); if (nx !== me.x || ny !== me.y) send('move', { x: nx, y: ny });
+  
       lastMove = now;
     }
   }
