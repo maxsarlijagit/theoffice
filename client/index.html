@@ -242,8 +242,8 @@ function update() {
   const now = Date.now();
   if (now - lastMove < MOVE_MS) return;
   
-  const nx = Math.max(0, Math.min(WORLD_W - 1, Math.round(me.x + dx * 0.5)));
-  const ny = Math.max(0, Math.min(WORLD_H - 1, Math.round(me.y + dy * 0.5)));
+  const nx = dx > 0 ? Math.min(WORLD_W - 1, me.x + 1) : dx < 0 ? Math.max(0, me.x - 1) : Math.round(me.x);
+  const ny = dy > 0 ? Math.min(WORLD_H - 1, me.y + 1) : dy < 0 ? Math.max(0, me.y - 1) : Math.round(me.y);
   
   if (nx !== me.x || ny !== me.y) {
     console.log("SEND MOVE:", {x: nx, y: ny, readyState: ws.readyState}); // Optimistic update: move locally immediately
