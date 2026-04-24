@@ -558,7 +558,7 @@ function update() {
   if (dx !== 0 || dy !== 0) {
     const now = Date.now();
     if (now - lastMove >= MOVE_MS) {
-      const nx = clamp(me.x + (dx !== 0 ? Math.sign(dx) * 0.5 : 0), 0, WORLD_W-1); const ny = clamp(me.y + (dy !== 0 ? Math.sign(dy) * 0.5 : 0), 0, WORLD_H-1); if (nx !== me.x || ny !== me.y) send('move', { x: nx, y: ny });
+      const nx = clamp(me.x + (dx !== 0 ? Math.sign(dx) * 0.5 : 0), 0, WORLD_W-1); const ny = clamp(me.y + (dy !== 0 ? Math.sign(dy) * 0.5 : 0), 0, WORLD_H-1); console.log('MOVE attempt: me=' + JSON.stringify({x: me.x, y: me.y}) + ' dx=' + dx + ' dy=' + dy + ' nx=' + nx + ' ny=' + ny + ' connected=' + connected + ' ws.readyState=' + (ws ? ws.readyState : 'null')); if (nx !== me.x || ny !== me.y) send('move', { x: nx, y: ny });
       lastMove = now;
     }
   }
