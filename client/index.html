@@ -204,7 +204,8 @@
     <div id="nearby-panel">
       <h4>Cerca</h4>
     </div>
-    <div id="status-panel">
+    <div id="toast" style="position:absolute;top:50px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #2a2a3a;padding:6px 16px;border-radius:4px;font-size:12px;display:none;z-index:200;"
+    id="status-panel">
       <div class="sopt" style="background:#78e08f;color:#000" data-s="available">DISPONIBLE</div>
       <div class="sopt" style="background:#e17055;color:#fff" data-s="focus">EN FOCO</div>
       <div class="sopt" style="background:#e94560;color:#fff" data-s="meeting">REUNIÓN</div>
@@ -405,7 +406,7 @@ function drawPlayer(px, py, colorIdx, status, frame, facing, isMe) {
   ctx.fillText('', px+16, py+36);
 }
 
-let ws, myId, myColorIdx = 0;
+let ws, myId, myColorIdx = 0, mySessionId = null, reconnectAttempts = 0, wasConnected = false;
 let players = {}, zones = {}, tileMaps = {};
 let chatMsgs = [], lastChatTs = 0;
 let connected = false, chatFocused = false;
@@ -424,10 +425,12 @@ document.addEventListener('keyup', e => {
 document.getElementById('chat-txt').addEventListener('focus', () => chatFocused = true);
 document.getElementById('chat-txt').addEventListener('blur', () => chatFocused = false);
 
+function showToast(msg, duration = 3000) { const t = document.getElementById("toast"); if (!t) return; t.textContent = msg; t.style.display = "block"; setTimeout(() => { t.style.display = "none"; }, duration); }
+
 function connect() {
   ws = new WebSocket(WS_URL);
   setCount('...');
-  ws.onopen = () => { connected = true; setCount(Object.keys(players).length); };
+  ws.onopen = () => { connected = true; wasConnected = true; reconnectAttempts = 0; setCount(Object.keys(players).length); if (mySessionId) { send('reconnect', { sessionId: mySessionId }); } else { showToast('Conectado'); } };
   ws.onmessage = e => handle(JSON.parse(e.data));
   ws.onclose = () => { connected = false; setCount('...'); setTimeout(connect, 3000); };
 }
@@ -435,7 +438,10 @@ function send(t, d) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.s
 
 function handle(msg) {
   const { type, data } = msg;
-  switch (type) {
+  case "error":
+      showToast(data.message || "Error");
+      break;
+    switch (type) {
     case 'welcome':
       myId = data.playerId;
       myColorIdx = data.paletteIdx || 0;
@@ -659,10 +665,12 @@ document.querySelectorAll('.sopt').forEach(el => {
 
 document.getElementById('login-btn').addEventListener('click', () => {
   const name = document.getElementById('login-name').value.trim() || 'Player';
-  if (connected) send('join', { name });
+  if (connected) send('join', { name: name, sessionId: localStorage.getItem('theoffice_session') });
+  document.getElementById('login-name').value = '';
 });
 
-document.getElementById('chat-toggle').addEventListener('click', () => { document.getElementById('chat-panel').classList.remove('hidden'); document.getElementById('chat-txt').focus(); });connect();
+document.getElementById('chat-toggle').addEventListener('click', () => { document.getElementById('chat-panel').classList.remove('hidden'); document.getElementById('chat-txt').focus(); });if (localStorage.getItem('theoffice_session')) { mySessionId = localStorage.getItem('theoffice_session'); }
+connect();
 setInterval(update, 1000/60);
 render();
   </script>
