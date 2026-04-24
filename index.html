@@ -125,7 +125,7 @@ function connect() {
   
   ws.onopen = () => {
     connected = true;
-    // Only reconnect if we have a session ID and were previously joined
+    if (mySession) {
       ws.send(JSON.stringify({ type: 'reconnect', data: { sessionId: mySession } }));
     }
   };
