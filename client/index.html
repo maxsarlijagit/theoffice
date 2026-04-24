@@ -79,7 +79,10 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
+      transition: opacity 0.5s;
     }
+    #chat-container.fading { opacity: 0.4; }
+    #chat-container.hidden { opacity: 0; pointer-events: none; }
     #chat-messages {
       background: rgba(0,0,0,0.75);
       border-radius: 10px;
@@ -98,6 +101,11 @@
       border-radius: 6px;
       background: rgba(255,255,255,0.08);
       word-break: break-word;
+      animation: msgIn 0.2s ease-out;
+    }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .chat-msg .name { font-weight: 600; margin-right: 4px; color: #fff; }
     .chat-msg .text { color: #ccc; }
@@ -214,7 +222,10 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const TILE = 32;
-    const MOVE_THROTTLE = 50; // ms between moves
+    const WORLD_W = 20;
+    const WORLD_H = 14;
+    const MOVE_THROTTLE = 50;
+    const CHAT_TIMEOUT = 5000;
 
     const WS_URL = 'wss://theoffice-production.up.railway.app';
     let ws = null;
@@ -226,8 +237,10 @@
     let connected = false;
     let lastMove = 0;
     let chatFocused = false;
+    let lastChatTime = 0;
+    let chatVisible = false;
+    let chatFadeTimer = null;
 
-    // Input - only capture movement when chat is NOT focused
     const keys = {};
     document.addEventListener('keydown', e => {
       if (e.target === document.getElementById('chat-input')) return;
@@ -238,31 +251,20 @@
       keys[e.key] = false;
     });
 
-    // Chat focus state
     document.getElementById('chat-input').addEventListener('focus', () => { chatFocused = true; });
     document.getElementById('chat-input').addEventListener('blur', () => { chatFocused = false; });
 
     function connect() {
       ws = new WebSocket(WS_URL);
       setStatus('Conectando...', true);
-      
-      ws.onopen = () => {
-        connected = true;
-        setStatus('En línea', false);
-      };
+      ws.onopen = () => { connected = true; setStatus('En línea', false); };
       ws.onmessage = e => handleMsg(JSON.parse(e.data));
-      ws.onclose = () => {
-        connected = false;
-        setStatus('Reconectando...', true);
-        setTimeout(connect, 3000);
-      };
+      ws.onclose = () => { connected = false; setStatus('Reconectando...', true); setTimeout(connect, 3000); };
       ws.onerror = () => setStatus('Error', true);
     }
 
     function send(type, data) {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type, data }));
-      }
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type, data }));
     }
 
     function setStatus(text, offline) {
@@ -280,12 +282,8 @@
           zones = data.zones;
           document.getElementById('login-modal').classList.add('hidden');
           break;
-        case 'player-joined':
-          players[data.id] = data;
-          break;
-        case 'player-left':
-          delete players[data.id];
-          break;
+        case 'player-joined': players[data.id] = data; break;
+        case 'player-left': delete players[data.playerId]; break;
         case 'player-moved':
           if (players[data.playerId]) {
             players[data.playerId].x = data.x;
@@ -296,15 +294,37 @@
         case 'chat':
           chatMessages.push(data);
           if (chatMessages.length > 20) chatMessages.shift();
+          lastChatTime = Date.now();
+          showChat();
           renderChat();
+          scheduleChatHide();
           break;
       }
       updateUI();
     }
 
+    function showChat() {
+      const el = document.getElementById('chat-container');
+      el.classList.remove('hidden', 'fading');
+      chatVisible = true;
+    }
+
+    function scheduleChatHide() {
+      if (chatFadeTimer) clearTimeout(chatFadeTimer);
+      chatFadeTimer = setTimeout(() => {
+        const el = document.getElementById('chat-container');
+        el.classList.add('fading');
+        setTimeout(() => {
+          if (Date.now() - lastChatTime >= CHAT_TIMEOUT) {
+            el.classList.add('hidden');
+            chatVisible = false;
+          }
+        }, 2000);
+      }, CHAT_TIMEOUT);
+    }
+
     function renderChat() {
       const el = document.getElementById('chat-messages');
-      const myMsgs = chatMessages.filter(m => m.fromId === myId);
       el.innerHTML = chatMessages.slice(-10).map(m => {
         const isSelf = m.fromId === myId;
         return `<div class="chat-msg${isSelf ? ' self' : ''}"><span class="name">${m.from}:</span><span class="text">${m.text}</span></div>`;
@@ -332,6 +352,10 @@
       }
     }
 
+    function clamp(val, min, max) {
+      return Math.max(min, Math.min(max, val));
+    }
+
     function update() {
       if (!myId || !players[myId] || chatFocused) return;
       
@@ -347,7 +371,9 @@
       if (dx !== 0 || dy !== 0) {
         const now = Date.now();
         if (now - lastMove >= MOVE_THROTTLE) {
-          send('move', { x: me.x + dx, y: me.y + dy });
+          const newX = clamp(me.x + dx, 0, WORLD_W - 1);
+          const newY = clamp(me.y + dy, 0, WORLD_H - 1);
+          send('move', { x: newX, y: newY });
           lastMove = now;
         }
       }
@@ -361,7 +387,6 @@
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Grid
       ctx.strokeStyle = 'rgba(255,255,255,0.03)';
       for (let x = 0; x < canvas.width; x += TILE) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -370,35 +395,28 @@
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
       }
       
-      // Zones
       for (const [name, zone] of Object.entries(zones)) {
         const { x, y, width, height, bgColor: zc } = zone;
-        
         ctx.fillStyle = zc + '33';
         ctx.fillRect(x * TILE, y * TILE, width * TILE, height * TILE);
-        
         ctx.strokeStyle = 'rgba(255,255,255,0.08)';
         ctx.lineWidth = 2;
         ctx.strokeRect(x * TILE, y * TILE, width * TILE, height * TILE);
-        
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         ctx.font = 'bold 10px sans-serif';
         ctx.fillText(name.replace('-', ' ').toUpperCase(), x * TILE + 6, y * TILE + 14);
       }
       
-      // Players
       for (const [id, p] of Object.entries(players)) {
         const px = p.x * TILE;
         const py = p.y * TILE;
         const isMe = id === myId;
         
-        // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();
         ctx.ellipse(px + 16, py + 30, 8, 3, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Self indicator (circle behind body, drawn first)
         if (isMe) {
           ctx.strokeStyle = '#fff';
           ctx.lineWidth = 2;
@@ -407,22 +425,17 @@
           ctx.stroke();
         }
         
-        // Body (rectangle) - no stroke here
         ctx.fillStyle = p.color || '#e94560';
         ctx.fillRect(px + 8, py + 10, 16, 16);
-        
-        // Head (circle)
         ctx.beginPath();
         ctx.arc(px + 16, py + 8, 6, 0, Math.PI * 2);
         ctx.fill();
         
-        // Name tag - with padding
         ctx.fillStyle = isMe ? '#fff' : 'rgba(255,255,255,0.75)';
         ctx.font = isMe ? 'bold 9px sans-serif' : '9px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(p.name, px + 16, py + 38);
         
-        // Proximity ring
         if (!isMe && me) {
           const dist = Math.sqrt((p.x - me.x)**2 + (p.y - me.y)**2);
           if (dist <= 3) {
@@ -438,7 +451,6 @@
       requestAnimationFrame(render);
     }
 
-    // Chat
     document.getElementById('chat-send').addEventListener('click', () => {
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
@@ -449,11 +461,8 @@
     });
     
     document.getElementById('chat-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('chat-send').click();
-      }
-      e.stopPropagation(); // Prevent movement keys from triggering
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('chat-send').click(); }
+      e.stopPropagation();
     });
 
     document.getElementById('join-btn').addEventListener('click', () => {
