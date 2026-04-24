@@ -187,7 +187,7 @@ wss.on('connection', ws => {
   });
 
   ws.on('close', () => {
-    const pid = clients.get(ws);
+    const pid = clients.get(ws); if (type !== "ping") console.log("HANDLE:", type, "pid:", pid, "wsState:", ws.readyState);
     const sid = wsToSession.get(ws);
     if (pid) {
       // Don't remove from world immediately — session keeps player data
