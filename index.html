@@ -1,135 +1,595 @@
-# The Office — Discord Activity
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Office</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a14;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #fff;
+      overflow: hidden;
+      user-select: none;
+    }
+    #app {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    #top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 800px;
+      max-width: 95vw;
+      padding: 0 8px;
+    }
+    .badge {
+      background: rgba(0,0,0,0.6);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .status-available { background: #78e08f; }
+    .status-focus { background: #e17055; }
+    .status-meeting { background: #e94560; }
+    .status-break { background: #fdcb6e; }
+    #players-count { color: #888; }
+    #canvas {
+      border-radius: 16px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+      max-width: 95vw;
+    }
+    #status-bar {
+      position: absolute;
+      top: 52px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      display: none;
+      gap: 8px;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    #status-bar.visible { display: flex; }
+    .status-option {
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.1s;
+      font-size: 11px;
+    }
+    .status-option:hover { transform: scale(1.1); }
+    #chat-panel {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 520px;
+      max-width: 92vw;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: opacity 0.4s, transform 0.4s;
+    }
+    #chat-panel.fading { opacity: 0.3; }
+    #chat-panel.hidden { opacity: 0; transform: translateX(-50%) translateY(20px); pointer-events: none; }
+    #chat-msgs {
+      background: rgba(0,0,0,0.8);
+      border-radius: 12px;
+      padding: 10px;
+      max-height: 120px;
+      overflow-y: auto;
+      backdrop-filter: blur(12px);
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.2) transparent;
+    }
+    #chat-msgs.visible { display: flex; }
+    .cmsg {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      animation: msgIn 0.2s ease-out;
+      word-break: break-word;
+    }
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .cmsg .sender { font-weight: 700; margin-right: 5px; }
+    .cmsg.loud .sender { color: #ff6b8a; }
+    .cmsg.self .sender { color: #78e08f; }
+    .cmsg .text { color: #ccc; }
+    .cmsg .audio-icon { font-size: 9px; margin-left: 4px; }
+    #chat-row {
+      display: flex;
+      gap: 6px;
+    }
+    #chat-in {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 20px;
+      border: none;
+      background: rgba(0,0,0,0.8);
+      color: #fff;
+      font-size: 13px;
+      backdrop-filter: blur(12px);
+      outline: none;
+    }
+    #chat-in:focus { background: rgba(0,0,0,0.95); }
+    #chat-btn {
+      padding: 10px 18px;
+      border-radius: 20px;
+      border: none;
+      background: #e94560;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    #chat-btn:hover { background: #ff6b8a; transform: scale(1.05); }
+    #login {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 20, 0.97);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+    #login.hidden { display: none; }
+    #login h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
+    #login p { color: #666; font-size: 14px; text-align: center; max-width: 380px; }
+    #name-in {
+      padding: 14px 24px;
+      border-radius: 12px;
+      border: none;
+      background: #1a1a2e;
+      color: #fff;
+      font-size: 16px;
+      width: 240px;
+      text-align: center;
+    }
+    #join-btn {
+      padding: 14px 40px;
+      border-radius: 12px;
+      border: none;
+      background: #e94560;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.15s;
+    }
+    #join-btn:hover { transform: scale(1.05); background: #ff6b8a; }
+    #hint { color: #444; font-size: 11px; }
+    #nearby-list {
+      position: absolute;
+      top: 90px;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 12px;
+      padding: 10px;
+      min-width: 160px;
+      backdrop-filter: blur(10px);
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #nearby-list.visible { display: flex; }
+    #nearby-list h4 { font-size: 11px; color: #666; margin-bottom: 4px; }
+    .nearby-player {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .nearby-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="top-bar">
+      <div class="badge" id="zone-badge">
+        <span class="badge-dot" style="background:#4a69bd"></span>
+        <span>Open Office</span>
+      </div>
+      <div class="badge" id="my-status-badge">
+        <span class="badge-dot status-available"></span>
+        <span>Disponible</span>
+      </div>
+      <div class="badge" id="players-count">👥 0</div>
+    </div>
+    <canvas id="canvas" width="800" height="560"></canvas>
+    <div id="status-bar">
+      <div class="status-option" data-status="available" style="background:#78e08f">Disponible</div>
+      <div class="status-option" data-status="focus" style="background:#e17055">En foco</div>
+      <div class="status-option" data-status="meeting" style="background:#e94560">Reunión</div>
+      <div class="status-option" data-status="break" style="background:#fdcb6e">En break</div>
+    </div>
+    <div id="nearby-list">
+      <h4>👥 Cerca de ti</h4>
+    </div>
+    <div id="chat-panel">
+      <div id="chat-msgs"></div>
+      <div id="chat-row">
+        <input type="text" id="chat-in" placeholder="Escribe un mensaje..." maxlength="200" />
+        <button id="chat-btn">Enviar</button>
+      </div>
+    </div>
+    <div id="login">
+      <h1>The Office</h1>
+      <p>Tu oficina virtual. Muate por las zonas, trabajá junto a tu equipo y charlá sin salir de Discord.</p>
+      <input type="text" id="name-in" placeholder="Tu nombre" maxlength="16" />
+      <button id="join-btn">Entrar a la oficina</button>
+      <div id="hint">WASD o ↑↓←→ para moverte</div>
+    </div>
+  </div>
 
-Una oficina virtual 2D multijugador dentro de Discord. Inspirado en Gather.town.
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const TILE = 32;
+    const WORLD_W = 20;
+    const WORLD_H = 17;
+    const MOVE_MS = 50;
+    const CHAT_HIDE_MS = 6000;
 
-## Concepto
+    const WS_URL = 'wss://theoffice-production.up.railway.app';
+    const STATUS_COLORS = { available: '#78e08f', focus: '#e17055', meeting: '#e94560', break: '#fdcb6e' };
+    const STATUS_LABELS = { available: 'Disponible', focus: 'En foco', meeting: 'Reunión', break: 'En break' };
 
-Tu equipo remoto tiene un espacio de presencia donde ver a tus colegas trabajar. Cada persona es un avatar personalizable que se mueve por zonas con música ambient. Cuando estás cerca de alguien, podés chatear.
+    let ws, myId, myColor = '#e94560', myStatus = 'available';
+    let players = {}, zones = {};
+    let chatMsgs = [], lastChatTs = 0;
+    let connected = false, chatFocused = false;
+    let lastMove = 0, chatFadeTimer = null;
+    let nearbyPlayers = [];
 
-## Live
+    const keys = {};
+    document.addEventListener('keydown', e => {
+      if (e.target === document.getElementById('chat-in')) return;
+      keys[e.key] = true;
+    });
+    document.addEventListener('keyup', e => {
+      if (e.target === document.getElementById('chat-in')) return;
+      keys[e.key] = false;
+    });
+    document.getElementById('chat-in').addEventListener('focus', () => chatFocused = true);
+    document.getElementById('chat-in').addEventListener('blur', () => chatFocused = false);
 
-🔗 **https://theoffice-production.up.railway.app**
+    function connect() {
+      ws = new WebSocket(WS_URL);
+      setStatusTxt('Conectando...', true);
+      ws.onopen = () => { connected = true; setStatusTxt('En línea', false); };
+      ws.onmessage = e => handle(JSON.parse(e.data));
+      ws.onclose = () => { connected = false; setStatusTxt('Reconectando...', true); setTimeout(connect, 3000); };
+      ws.onerror = () => setStatusTxt('Error', true);
+    }
+    function send(t, d) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: t, data: d })); }
+    function setStatusTxt(t, off) {
+      const el = document.querySelector('#players-count');
+      if (off) el.textContent = t + '...'; else el.textContent = `👥 ${Object.keys(players).length}`;
+    }
 
-## Tech Stack
+    function handle(msg) {
+      const { type, data } = msg;
+      switch (type) {
+        case 'welcome':
+          myId = data.playerId;
+          myColor = data.color;
+          players = data.world;
+          zones = data.zones;
+          document.getElementById('login').classList.add('hidden');
+          updateUI();
+          break;
+        case 'player-joined': players[data.id] = data; updateUI(); break;
+        case 'player-left': delete players[data.playerId]; updateUI(); break;
+        case 'player-moved':
+          if (players[data.playerId]) {
+            players[data.playerId].x = data.x;
+            players[data.playerId].y = data.y;
+            if (data.zone) players[data.playerId].zone = data.zone;
+          }
+          break;
+        case 'player-status':
+          if (players[data.playerId]) players[data.playerId].status = data.status;
+          updateUI();
+          break;
+        case 'nearby':
+          nearbyPlayers = data.players;
+          updateNearbyList();
+          break;
+        case 'chat':
+          chatMsgs.push(data);
+          if (chatMsgs.length > 30) chatMsgs.shift();
+          lastChatTs = Date.now();
+          showChat(); renderChat(); scheduleChatHide();
+          break;
+      }
+    }
 
-- **Backend:** Node.js + Express + WebSocket (ws)
-- **Frontend:** Canvas 2D (nativo, sin frameworks)
-- **Hosting:** Railway
+    function showChat() {
+      const el = document.getElementById('chat-panel');
+      el.classList.remove('hidden', 'fading');
+    }
 
-## Quick Start
+    function scheduleChatHide() {
+      if (chatFadeTimer) clearTimeout(chatFadeTimer);
+      chatFadeTimer = setTimeout(() => {
+        const el = document.getElementById('chat-panel');
+        el.classList.add('fading');
+        setTimeout(() => {
+          if (Date.now() - lastChatTs >= CHAT_HIDE_MS) {
+            el.classList.add('hidden');
+          } else {
+            el.classList.remove('fading');
+          }
+        }, 1500);
+      }, CHAT_HIDE_MS);
+    }
 
-```bash
-# Clone
-git clone https://github.com/maxsarlijagit/theoffice
-cd theoffice
+    function renderChat() {
+      const el = document.getElementById('chat-msgs');
+      el.innerHTML = chatMsgs.slice(-12).map(m => {
+        const isSelf = m.fromId === myId;
+        const isLoud = m.audioLevel >= 0.8;
+        const icon = m.audioLevel >= 0.5 ? '🔊' : m.audioLevel > 0 ? '🔉' : '🔈';
+        return `<div class="cmsg${isSelf?' self':''}${isLoud?' loud':''}"><span class="sender">${m.from}:</span><span class="text">${m.text}</span>${!isSelf?`<span class="audio-icon">${icon}</span>`:''}</div>`;
+      }).join('');
+      el.scrollTop = el.scrollHeight;
+      el.className = chatMsgs.length > 0 ? 'visible' : '';
+    }
 
-# Install
-npm install
+    function updateUI() {
+      const me = players[myId];
+      const zone = me?.zone || 'open-office';
+      document.getElementById('zone-badge').querySelector('span:last-child').textContent = zone.replace('-', ' ');
+      
+      // Status badge
+      const statusEl = document.getElementById('my-status-badge');
+      const status = me?.status || 'available';
+      const dot = statusEl.querySelector('.badge-dot');
+      dot.className = 'badge-dot status-' + status;
+      statusEl.querySelector('span:last-child').textContent = STATUS_LABELS[status];
+      
+      document.getElementById('players-count').textContent = `👥 ${Object.keys(players).length}`;
+    }
 
-# Run server
-npm start
+    function updateNearbyList() {
+      const el = document.getElementById('nearby-list');
+      const me = players[myId];
+      if (!me) { el.classList.remove('visible'); return; }
+      
+      const nearby = nearbyPlayers.filter(p => p.dist <= 3);
+      el.className = nearby.length > 0 ? 'visible' : '';
+      if (nearby.length === 0) return;
+      
+      let html = '<h4>👥 Cerca de ti</h4>';
+      for (const p of nearby) {
+        const player = players[p.id];
+        if (!player) continue;
+        html += `<div class="nearby-player"><span class="nearby-dot" style="background:${player.color}"></span><span>${p.name}</span><span style="color:${STATUS_COLORS[p.status]||'#78e08f'};font-size:10px">●</span></div>`;
+      }
+      el.innerHTML = html;
+    }
 
-# Open browser
-open http://localhost:3000
-```
+    function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
 
-## Deploy
+    function update() {
+      if (!myId || !players[myId] || chatFocused) return;
+      const me = players[myId];
+      const spd = 0.1;
+      let dx = 0, dy = 0;
+      if (keys['ArrowUp']||keys['w']||keys['W']) dy = -spd;
+      if (keys['ArrowDown']||keys['s']||keys['S']) dy = spd;
+      if (keys['ArrowLeft']||keys['a']||keys['A']) dx = -spd;
+      if (keys['ArrowRight']||keys['d']||keys['D']) dx = spd;
+      
+      if (dx || dy) {
+        const now = Date.now();
+        if (now - lastMove >= MOVE_MS) {
+          send('move', { x: clamp(me.x+dx, 0, WORLD_W-1), y: clamp(me.y+dy, 0, WORLD_H-1) });
+          lastMove = now;
+        }
+      }
+    }
 
-Push a GitHub → Railway hace deploy automático.
+    function drawObject(obj, ox, oy) {
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      switch (obj.type) {
+        case 'desk':
+          ctx.fillStyle = '#3d2914';
+          ctx.fillRect(ox + obj.x*TILE + 2, oy + obj.y*TILE + TILE - 6, obj.w*TILE - 4, 6);
+          ctx.fillStyle = 'rgba(255,255,255,0.04)';
+          ctx.fillRect(ox + obj.x*TILE + 4, oy + obj.y*TILE + 4, obj.w*TILE - 8, TILE - 10);
+          break;
+        case 'plant':
+          ctx.fillStyle = '#2d5a3d';
+          ctx.beginPath();
+          ctx.ellipse(ox + obj.x*TILE + 16, oy + obj.y*TILE + 20, 8, 6, 0, 0, Math.PI*2);
+          ctx.fill();
+          ctx.fillStyle = '#4a3728';
+          ctx.fillRect(ox + obj.x*TILE + 12, oy + obj.y*TILE + 24, 8, 6);
+          break;
+        case 'machine':
+          ctx.fillStyle = '#1a3a5c';
+          ctx.fillRect(ox + obj.x*TILE + 2, oy + obj.y*TILE + 4, obj.w*TILE - 4, obj.h*TILE - 4);
+          ctx.fillStyle = '#e94560';
+          ctx.fillRect(ox + obj.x*TILE + 6, oy + obj.y*TILE + 8, 6, 6);
+          ctx.fillStyle = '#4a69bd';
+          ctx.fillRect(ox + obj.x*TILE + 14, oy + obj.y*TILE + 8, 6, 6);
+          break;
+        case 'table':
+          ctx.fillStyle = '#3d2914';
+          ctx.fillRect(ox + obj.x*TILE + 2, oy + obj.y*TILE + 2, obj.w*TILE - 4, obj.h*TILE - 4);
+          ctx.fillStyle = 'rgba(255,255,255,0.03)';
+          ctx.fillRect(ox + obj.x*TILE + 6, oy + obj.y*TILE + 6, obj.w*TILE - 12, obj.h*TILE - 8);
+          break;
+      }
+    }
 
-```
-git push origin main
-```
+    function render() {
+      const me = players[myId];
+      const zone = me?.zone || 'open-office';
+      const bgColor = zones[zone]?.bgColor || '#1a2a4a';
+      
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+      for (let x = 0; x < canvas.width; x += TILE) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += TILE) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+      
+      // Zones + objects
+      for (const [zName, zone] of Object.entries(zones)) {
+        const { x, y, width, height, bgColor: zc } = zone;
+        ctx.fillStyle = zc + '28';
+        ctx.fillRect(x*TILE, y*TILE, width*TILE, height*TILE);
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x*TILE, y*TILE, width*TILE, height*TILE);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(zName.replace('-', ' ').toUpperCase(), x*TILE + 8, y*TILE + 16);
+        if (zone.objects) {
+          for (const obj of zone.objects) drawObject(obj, 0, 0);
+        }
+      }
+      
+      // Players (sorted by y for depth)
+      const sorted = Object.entries(players).sort((a, b) => a[1].y - b[1].y);
+      for (const [id, p] of sorted) {
+        const px = p.x * TILE;
+        const py = p.y * TILE;
+        const isMe = id === myId;
+        
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(px+16, py+30, 10, 4, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Self ring
+        if (isMe) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(px+16, py+18, 22, 0, Math.PI*2);
+          ctx.stroke();
+        }
+        
+        // Body
+        ctx.fillStyle = p.color || '#e94560';
+        ctx.fillRect(px+8, py+12, 16, 14);
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(px+16, py+10, 7, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Status dot
+        const status = p.status || 'available';
+        ctx.fillStyle = STATUS_COLORS[status];
+        ctx.beginPath();
+        ctx.arc(px+24, py+8, 4, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Name
+        ctx.fillStyle = isMe ? '#fff' : 'rgba(255,255,255,0.8)';
+        ctx.font = isMe ? 'bold 10px sans-serif' : '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, px+16, py+38);
+        
+        // Proximity ring
+        if (!isMe && me) {
+          const dist = Math.sqrt((p.x-me.x)**2 + (p.y-me.y)**2);
+          if (dist <= 3) {
+            const alpha = 0.15 * (1 - dist/3);
+            ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(px+16, py+18, 20, 0, Math.PI*2);
+            ctx.stroke();
+          }
+        }
+      }
+      
+      requestAnimationFrame(render);
+    }
 
-## Architecture
+    // Chat
+    document.getElementById('chat-btn').addEventListener('click', () => {
+      const text = document.getElementById('chat-in').value.trim();
+      if (text && connected) { send('chat', { text }); document.getElementById('chat-in').value = ''; }
+    });
+    document.getElementById('chat-in').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('chat-btn').click(); }
+      e.stopPropagation();
+    });
 
-```
-theoffice/
-├── server/
-│   └── index.js      # Express + WebSocket server
-├── client/
-│   └── index.html    # Canvas 2D client (standalone)
-├── package.json
-└── README.md
-```
+    // Status bar toggle (click zone badge to show)
+    document.getElementById('my-status-badge').addEventListener('click', () => {
+      const bar = document.getElementById('status-bar');
+      bar.className = bar.className === 'visible' ? '' : 'visible';
+    });
+    document.querySelectorAll('.status-option').forEach(el => {
+      el.addEventListener('click', () => {
+        const s = el.dataset.status;
+        myStatus = s;
+        send('status', { status: s });
+        const dot = document.querySelector('#my-status-badge .badge-dot');
+        dot.className = 'badge-dot status-' + s;
+        document.querySelector('#my-status-badge span:last-child').textContent = STATUS_LABELS[s];
+        document.getElementById('status-bar').className = '';
+      });
+    });
 
-### WebSocket API
+    document.getElementById('join-btn').addEventListener('click', () => {
+      const name = document.getElementById('name-in').value.trim() || 'Player';
+      if (connected) send('join', { name });
+    });
 
-| Evento | Direction | Datos |
-|--------|-----------|-------|
-| `join` | → server | `{ name }` |
-| `move` | → server | `{ x, y }` |
-| `chat` | → server | `{ text }` |
-| `welcome` | ← server | `{ playerId, world, zones, color }` |
-| `player-joined` | ← server | player object |
-| `player-moved` | ← server | `{ playerId, x, y, zone }` |
-| `player-left` | ← server | `{ playerId }` |
-| `chat` | ← server | `{ from, fromId, text, zone, timestamp }` |
-
-### Zonas
-
-| Zona | Descripción | Música |
-|------|-------------|--------|
-| Open Office | Zona central, trabajo | Lo-Fi |
-| Focus Room | Silencio, concentración | Ninguna |
-| Cafetería | Social, breaks | Upbeat |
-| Arcade | Minijuegos | Enérgica |
-| Estudio | Presentaciones | Neutral |
-
-### Proximidad
-
-- Radio de proximidad: **3 tiles**
-- Cuando estás a ≤3 tiles de otro jugador:
-  - Aparece un indicador visual
-  - Se habilita el chat
-  - Se pueden ver los mensajes en tiempo real
-
-## Roadmap
-
-### M1 ✅ Completo
-- [x] WebSocket server
-- [x] Cliente Canvas con mapa tile-based
-- [x] Movimiento (WASD / arrows)
-- [x] Multiplayer en Railway
-- [x] Sincronización de posiciones
-- [x] Detección de desconexiones
-
-### M2 🎨 En desarrollo
-- [ ] Sprites custom (Artists)
-- [ ] Customización de avatar (colores, outfits)
-- [ ] Música por zona (streams embebidos)
-- [ ] Estado "en foco" visual
-- [ ] UI/UX refinamiento
-
-### M3 🎮 Discord Activity
-- [ ] Discord Activity API
-- [ ] Rich Presence
-- [ ] Voice channel sync
-- [ ] Screenshare integration
-
-### M4 🎯 Minijuegos
-- [ ] Juegos en zona Arcade
-- [ ] Leaderboards por servidor
-- [ ] Eventos periódicos
-
-## Equipo
-
-| Rol | Integrante |
-|----|-----------|
-| PM | Igor Gopkalo Streiff |
-| Developer | Max Sarlija, Manuel Mejia |
-| Tech Artist | Mariano Zulueta, Kalil Fiat, Manuel Castellani, Mauricio van der Wildt, Facundo Villarreal |
-| Artist | Franco Ferrarello, Alejandro Arteaga |
-
-## Diseño Visual
-
-- Estilo: Flat + colores vibrantes
-- Paleta de jugadores: 12 colores predefined
-- Fondos por zona con tintes diferenciados
-- Avatares: cuerpo rectangular + cabeza circular
-
-## Links
-
-- Repo: https://github.com/maxsarlijagit/theoffice
-- Live: https://theoffice-production.up.railway.app
-- Design Bible: `the_office_discord.pdf`
+    connect();
+    setInterval(update, 1000/60);
+    render();
+  </script>
+</body>
+</html>
