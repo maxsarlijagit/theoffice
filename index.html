@@ -147,9 +147,10 @@
     }
     #login button:hover { background: #ff6b8a; }
     #status-panel {
-      position: absolute;
-      top: 44px;
+      position: fixed;
+      top: 60px;
       right: 20px;
+      z-index: 300;
       background: rgba(0,0,0,0.9);
       border: 1px solid #2a2a3a;
       border-radius: 4px;
@@ -415,9 +416,12 @@ let lastMove = 0;
 let nearbyPlayers = [];
 
 const keys = {};
+let debugKeyCount = 0;
 document.addEventListener('keydown', e => {
   if (e.target === document.getElementById('chat-txt')) return;
   keys[e.key] = true;
+  debugKeyCount++;
+  if (debugKeyCount % 100 === 1) console.log("keydown:", e.key, "chatFocused:", chatFocused, "myId:", myId);
 });
 document.addEventListener('keyup', e => {
   if (e.target === document.getElementById('chat-txt')) return;
@@ -541,6 +545,9 @@ function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
 
 function update() {
   if (!myId || !players[myId] || chatFocused) return;
+  // Debug: log if keys are being captured
+  const anyKey = Object.values(keys).some(v => v);
+  if (anyKey && Math.random() < 0.01) console.log("keys pressed:", JSON.stringify(keys));
   const me = players[myId];
   const spd = 0.1;
   let dx = 0, dy = 0;
@@ -588,7 +595,7 @@ function render() {
     // Zone label
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
     ctx.font = 'bold 10px Courier New';
-    ctx.fillText(zName.replace('-', ' ').toUpperCase(), x*TILE+6, y*TILE+14);
+    ctx.textAlign = 'left'; ctx.fillText(zName.replace('-', ' ').toUpperCase(), x*TILE+8, y*TILE+14); ctx.textAlign = 'center';
     
     // Draw tiles
     const tiles = tileMaps[zName];
@@ -655,7 +662,8 @@ document.getElementById('my-status').style.cursor = 'pointer'; document.getEleme
 });
 document.querySelectorAll('.sopt').forEach(el => {
   el.addEventListener('click', () => {
-    send('status', { status: el.dataset.s });
+    if (connected) send('status', { status: el.dataset.s });
+    else showToast('No conectado');
     const dot = document.querySelector('#my-status .dot');
     dot.style.background = STATUS_C[el.dataset.s];
     document.querySelector('#my-status span:last-child').textContent = STATUS_L[el.dataset.s];
