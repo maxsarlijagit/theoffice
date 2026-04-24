@@ -199,6 +199,7 @@
         <span>DISPONIBLE</span>
       </div>
       <div class="hud-item" id="count-hud">0 ONLINE</div>
+      <button id="chat-toggle" style="background:#0a0a14;border:1px solid #2a2a3a;color:#555;padding:5px 10px;border-radius:4px;font-size:11px;cursor:pointer;display:inline;vertical-align:middle">💬</button>
     </div>
     <canvas id="canvas" width="800" height="544"></canvas>
     <div id="nearby-panel">
@@ -444,7 +445,7 @@ function handle(msg) {
       break;
     case 'welcome':
       myId = data.playerId;
-      myColorIdx = data.paletteIdx || 0;
+      myColorIdx = data.paletteIdx !== undefined ? data.paletteIdx : 0;
       players = data.world;
       zones = data.zones;
       tileMaps = {};
@@ -486,6 +487,7 @@ function handle(msg) {
 
 function setCount(n) {
   document.getElementById('count-hud').textContent = typeof n === 'number' ? `${n} ONLINE` : n;
+  if (typeof n === 'number' && n >= 0) requestAnimationFrame(() => {}); // refresh
 }
 
 function updateHUD() {
@@ -558,7 +560,7 @@ function update() {
 function render() {
   const me = players[myId];
   const zone = me?.zone || 'open-office';
-  const z = zones[zone] || zones['open-office'];
+  const z = zones[zone] || zones['open-office'] || { bgColor: '#0d1b2a', floorColor: '#1b263b' };
   
   // Background
   ctx.fillStyle = z.bgColor || '#0d1b2a';
@@ -648,8 +650,7 @@ document.getElementById('chat-txt').addEventListener('keydown', e => {
 });
 
 // Status
-document.getElementById('my-status').addEventListener('click', () => {
-  const el = document.getElementById('status-panel');
+document.getElementById('my-status').style.cursor = 'pointer'; document.getElementById('my-status').addEventListener('click', () => { const el = document.getElementById('status-panel');
   el.className = el.className === 'visible' ? '' : 'visible';
 });
 document.querySelectorAll('.sopt').forEach(el => {
