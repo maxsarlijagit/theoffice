@@ -7,214 +7,254 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #0f0f1a;
+      background: #0a0a14;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       color: #fff;
       overflow: hidden;
+      user-select: none;
     }
-    #game-container {
+    #app {
       position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
-    }
-    canvas {
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      max-width: 95vw;
+      gap: 8px;
     }
     #top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      width: 640px;
+      width: 800px;
       max-width: 95vw;
-      padding: 0 4px;
+      padding: 0 8px;
     }
-    #zone-badge {
-      background: rgba(0,0,0,0.5);
-      padding: 6px 16px;
+    .badge {
+      background: rgba(0,0,0,0.6);
+      padding: 6px 14px;
       border-radius: 20px;
+      font-size: 12px;
       font-weight: 600;
-      font-size: 13px;
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    #status {
-      background: rgba(0,0,0,0.5);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 11px;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(10px);
       display: flex;
       align-items: center;
       gap: 6px;
     }
-    .status-dot {
-      width: 7px;
-      height: 7px;
+    .badge-dot {
+      width: 8px; height: 8px;
       border-radius: 50%;
-      background: #78e08f;
     }
-    .status-dot.offline { background: #eb5757; }
-    #players-count {
-      background: rgba(0,0,0,0.5);
-      padding: 6px 12px;
+    .status-available { background: #78e08f; }
+    .status-focus { background: #e17055; }
+    .status-meeting { background: #e94560; }
+    .status-break { background: #fdcb6e; }
+    #players-count { color: #888; }
+    #canvas {
+      border-radius: 16px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+      max-width: 95vw;
+    }
+    #status-bar {
+      position: absolute;
+      top: 52px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      padding: 6px 16px;
       border-radius: 20px;
       font-size: 11px;
-      backdrop-filter: blur(8px);
+      display: none;
+      gap: 8px;
+      align-items: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
     }
-    #chat-container {
+    #status-bar.visible { display: flex; }
+    .status-option {
+      padding: 4px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.1s;
+      font-size: 11px;
+    }
+    .status-option:hover { transform: scale(1.1); }
+    #chat-panel {
       position: absolute;
       bottom: 16px;
       left: 50%;
       transform: translateX(-50%);
-      width: 480px;
+      width: 520px;
       max-width: 92vw;
       display: flex;
       flex-direction: column;
       gap: 6px;
-      transition: opacity 0.5s;
+      transition: opacity 0.4s, transform 0.4s;
     }
-    #chat-container.fading { opacity: 0.4; }
-    #chat-container.hidden { opacity: 0; pointer-events: none; }
-    #chat-messages {
-      background: rgba(0,0,0,0.75);
-      border-radius: 10px;
+    #chat-panel.fading { opacity: 0.3; }
+    #chat-panel.hidden { opacity: 0; transform: translateX(-50%) translateY(20px); pointer-events: none; }
+    #chat-msgs {
+      background: rgba(0,0,0,0.8);
+      border-radius: 12px;
       padding: 10px;
       max-height: 120px;
       overflow-y: auto;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(12px);
       display: none;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.2) transparent;
     }
-    #chat-messages.visible { display: flex; }
-    .chat-msg {
-      font-size: 11px;
-      padding: 3px 6px;
-      border-radius: 6px;
-      background: rgba(255,255,255,0.08);
-      word-break: break-word;
+    #chat-msgs.visible { display: flex; }
+    .cmsg {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
       animation: msgIn 0.2s ease-out;
+      word-break: break-word;
     }
     @keyframes msgIn {
-      from { opacity: 0; transform: translateY(4px); }
+      from { opacity: 0; transform: translateY(-4px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    .chat-msg .name { font-weight: 600; margin-right: 4px; color: #fff; }
-    .chat-msg .text { color: #ccc; }
-    .chat-msg.self .name { color: #78e08f; }
-    #chat-input-row {
+    .cmsg .sender { font-weight: 700; margin-right: 5px; }
+    .cmsg.loud .sender { color: #ff6b8a; }
+    .cmsg.self .sender { color: #78e08f; }
+    .cmsg .text { color: #ccc; }
+    .cmsg .audio-icon { font-size: 9px; margin-left: 4px; }
+    #chat-row {
       display: flex;
       gap: 6px;
     }
-    #chat-input {
+    #chat-in {
       flex: 1;
-      padding: 8px 14px;
+      padding: 10px 16px;
       border-radius: 20px;
       border: none;
-      background: rgba(0,0,0,0.75);
+      background: rgba(0,0,0,0.8);
       color: #fff;
-      font-size: 12px;
-      backdrop-filter: blur(8px);
+      font-size: 13px;
+      backdrop-filter: blur(12px);
       outline: none;
     }
-    #chat-input:focus { background: rgba(0,0,0,0.9); }
-    #chat-send {
-      padding: 8px 16px;
+    #chat-in:focus { background: rgba(0,0,0,0.95); }
+    #chat-btn {
+      padding: 10px 18px;
       border-radius: 20px;
       border: none;
       background: #e94560;
       color: #fff;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 13px;
+      transition: background 0.15s, transform 0.1s;
     }
-    #chat-send:hover { background: #ff6b8a; }
-    #nearby-banner {
+    #chat-btn:hover { background: #ff6b8a; transform: scale(1.05); }
+    #login {
       position: absolute;
-      top: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.65);
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 11px;
-      display: none;
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    #nearby-banner.visible { display: block; }
-    #login-modal {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 15, 26, 0.97);
+      inset: 0;
+      background: rgba(10, 10, 20, 0.97);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 16px;
-      backdrop-filter: blur(8px);
+      gap: 20px;
+      backdrop-filter: blur(12px);
+      z-index: 100;
     }
-    #login-modal.hidden { display: none; }
-    #login-modal h1 { font-size: 28px; font-weight: 700; }
-    #login-modal p { color: #777; font-size: 13px; max-width: 360px; text-align: center; }
-    #name-input {
-      padding: 12px 20px;
-      border-radius: 10px;
+    #login.hidden { display: none; }
+    #login h1 { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
+    #login p { color: #666; font-size: 14px; text-align: center; max-width: 380px; }
+    #name-in {
+      padding: 14px 24px;
+      border-radius: 12px;
       border: none;
       background: #1a1a2e;
       color: #fff;
-      font-size: 15px;
-      width: 220px;
+      font-size: 16px;
+      width: 240px;
       text-align: center;
     }
     #join-btn {
-      padding: 12px 36px;
-      border-radius: 10px;
+      padding: 14px 40px;
+      border-radius: 12px;
       border: none;
       background: #e94560;
       color: #fff;
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 16px;
+      font-weight: 700;
       cursor: pointer;
-      transition: transform 0.1s;
+      transition: transform 0.15s, background 0.15s;
     }
-    #join-btn:hover { transform: scale(1.05); }
-    #controls-hint { color: #555; font-size: 11px; }
+    #join-btn:hover { transform: scale(1.05); background: #ff6b8a; }
+    #hint { color: #444; font-size: 11px; }
+    #nearby-list {
+      position: absolute;
+      top: 90px;
+      right: 20px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 12px;
+      padding: 10px;
+      min-width: 160px;
+      backdrop-filter: blur(10px);
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #nearby-list.visible { display: flex; }
+    #nearby-list h4 { font-size: 11px; color: #666; margin-bottom: 4px; }
+    .nearby-player {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .nearby-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body>
-  <div id="game-container">
+  <div id="app">
     <div id="top-bar">
-      <div id="zone-badge">Open Office</div>
-      <div id="status">
-        <span class="status-dot"></span>
-        <span>Conectando...</span>
+      <div class="badge" id="zone-badge">
+        <span class="badge-dot" style="background:#4a69bd"></span>
+        <span>Open Office</span>
       </div>
-      <div id="players-count">👥 0 online</div>
+      <div class="badge" id="my-status-badge">
+        <span class="badge-dot status-available"></span>
+        <span>Disponible</span>
+      </div>
+      <div class="badge" id="players-count">👥 0</div>
     </div>
-    <canvas id="canvas" width="640" height="480"></canvas>
-    <div id="nearby-banner">👥 Jugadores cerca</div>
-    <div id="chat-container">
-      <div id="chat-messages"></div>
-      <div id="chat-input-row">
-        <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="200" />
-        <button id="chat-send">Enviar</button>
+    <canvas id="canvas" width="800" height="560"></canvas>
+    <div id="status-bar">
+      <div class="status-option" data-status="available" style="background:#78e08f">Disponible</div>
+      <div class="status-option" data-status="focus" style="background:#e17055">En foco</div>
+      <div class="status-option" data-status="meeting" style="background:#e94560">Reunión</div>
+      <div class="status-option" data-status="break" style="background:#fdcb6e">En break</div>
+    </div>
+    <div id="nearby-list">
+      <h4>👥 Cerca de ti</h4>
+    </div>
+    <div id="chat-panel">
+      <div id="chat-msgs"></div>
+      <div id="chat-row">
+        <input type="text" id="chat-in" placeholder="Escribe un mensaje..." maxlength="200" />
+        <button id="chat-btn">Enviar</button>
       </div>
     </div>
-    <div id="login-modal">
+    <div id="login">
       <h1>The Office</h1>
-      <p>Tu oficina virtual dentro de Discord. Muate por las zonas y charlá con quienes estén cerca.</p>
-      <input type="text" id="name-input" placeholder="Tu nombre" maxlength="16" />
-      <button id="join-btn">Entrar</button>
-      <div id="controls-hint">WASD o ↑↓←→ para moverse</div>
+      <p>Tu oficina virtual. Muate por las zonas, trabajá junto a tu equipo y charlá sin salir de Discord.</p>
+      <input type="text" id="name-in" placeholder="Tu nombre" maxlength="16" />
+      <button id="join-btn">Entrar a la oficina</button>
+      <div id="hint">WASD o ↑↓←→ para moverte</div>
     </div>
   </div>
 
@@ -223,56 +263,48 @@
     const ctx = canvas.getContext('2d');
     const TILE = 32;
     const WORLD_W = 20;
-    const WORLD_H = 14;
-    const MOVE_THROTTLE = 50;
-    const CHAT_TIMEOUT = 5000;
+    const WORLD_H = 17;
+    const MOVE_MS = 50;
+    const CHAT_HIDE_MS = 6000;
 
     const WS_URL = 'wss://theoffice-production.up.railway.app';
-    let ws = null;
-    let myId = null;
-    let myColor = '#e94560';
-    let players = {};
-    let zones = {};
-    let chatMessages = [];
-    let connected = false;
-    let lastMove = 0;
-    let chatFocused = false;
-    let lastChatTime = 0;
-    let chatVisible = false;
-    let chatFadeTimer = null;
+    const STATUS_COLORS = { available: '#78e08f', focus: '#e17055', meeting: '#e94560', break: '#fdcb6e' };
+    const STATUS_LABELS = { available: 'Disponible', focus: 'En foco', meeting: 'Reunión', break: 'En break' };
+
+    let ws, myId, myColor = '#e94560', myStatus = 'available';
+    let players = {}, zones = {};
+    let chatMsgs = [], lastChatTs = 0;
+    let connected = false, chatFocused = false;
+    let lastMove = 0, chatFadeTimer = null;
+    let nearbyPlayers = [];
 
     const keys = {};
     document.addEventListener('keydown', e => {
-      if (e.target === document.getElementById('chat-input')) return;
+      if (e.target === document.getElementById('chat-in')) return;
       keys[e.key] = true;
     });
     document.addEventListener('keyup', e => {
-      if (e.target === document.getElementById('chat-input')) return;
+      if (e.target === document.getElementById('chat-in')) return;
       keys[e.key] = false;
     });
-
-    document.getElementById('chat-input').addEventListener('focus', () => { chatFocused = true; });
-    document.getElementById('chat-input').addEventListener('blur', () => { chatFocused = false; });
+    document.getElementById('chat-in').addEventListener('focus', () => chatFocused = true);
+    document.getElementById('chat-in').addEventListener('blur', () => chatFocused = false);
 
     function connect() {
       ws = new WebSocket(WS_URL);
-      setStatus('Conectando...', true);
-      ws.onopen = () => { connected = true; setStatus('En línea', false); };
-      ws.onmessage = e => handleMsg(JSON.parse(e.data));
-      ws.onclose = () => { connected = false; setStatus('Reconectando...', true); setTimeout(connect, 3000); };
-      ws.onerror = () => setStatus('Error', true);
+      setStatusTxt('Conectando...', true);
+      ws.onopen = () => { connected = true; setStatusTxt('En línea', false); };
+      ws.onmessage = e => handle(JSON.parse(e.data));
+      ws.onclose = () => { connected = false; setStatusTxt('Reconectando...', true); setTimeout(connect, 3000); };
+      ws.onerror = () => setStatusTxt('Error', true);
+    }
+    function send(t, d) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: t, data: d })); }
+    function setStatusTxt(t, off) {
+      const el = document.querySelector('#players-count');
+      if (off) el.textContent = t + '...'; else el.textContent = `👥 ${Object.keys(players).length}`;
     }
 
-    function send(type, data) {
-      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type, data }));
-    }
-
-    function setStatus(text, offline) {
-      document.querySelector('#status span:last-child').textContent = text;
-      document.querySelector('.status-dot').className = 'status-dot' + (offline ? ' offline' : '');
-    }
-
-    function handleMsg(msg) {
+    function handle(msg) {
       const { type, data } = msg;
       switch (type) {
         case 'welcome':
@@ -280,10 +312,11 @@
           myColor = data.color;
           players = data.world;
           zones = data.zones;
-          document.getElementById('login-modal').classList.add('hidden');
+          document.getElementById('login').classList.add('hidden');
+          updateUI();
           break;
-        case 'player-joined': players[data.id] = data; break;
-        case 'player-left': delete players[data.playerId]; break;
+        case 'player-joined': players[data.id] = data; updateUI(); break;
+        case 'player-left': delete players[data.playerId]; updateUI(); break;
         case 'player-moved':
           if (players[data.playerId]) {
             players[data.playerId].x = data.x;
@@ -291,91 +324,140 @@
             if (data.zone) players[data.playerId].zone = data.zone;
           }
           break;
+        case 'player-status':
+          if (players[data.playerId]) players[data.playerId].status = data.status;
+          updateUI();
+          break;
+        case 'nearby':
+          nearbyPlayers = data.players;
+          updateNearbyList();
+          break;
         case 'chat':
-          chatMessages.push(data);
-          if (chatMessages.length > 20) chatMessages.shift();
-          lastChatTime = Date.now();
-          showChat();
-          renderChat();
-          scheduleChatHide();
+          chatMsgs.push(data);
+          if (chatMsgs.length > 30) chatMsgs.shift();
+          lastChatTs = Date.now();
+          showChat(); renderChat(); scheduleChatHide();
           break;
       }
-      updateUI();
     }
 
     function showChat() {
-      const el = document.getElementById('chat-container');
+      const el = document.getElementById('chat-panel');
       el.classList.remove('hidden', 'fading');
-      chatVisible = true;
     }
 
     function scheduleChatHide() {
       if (chatFadeTimer) clearTimeout(chatFadeTimer);
       chatFadeTimer = setTimeout(() => {
-        const el = document.getElementById('chat-container');
+        const el = document.getElementById('chat-panel');
         el.classList.add('fading');
         setTimeout(() => {
-          if (Date.now() - lastChatTime >= CHAT_TIMEOUT) {
+          if (Date.now() - lastChatTs >= CHAT_HIDE_MS) {
             el.classList.add('hidden');
-            chatVisible = false;
+          } else {
+            el.classList.remove('fading');
           }
-        }, 2000);
-      }, CHAT_TIMEOUT);
+        }, 1500);
+      }, CHAT_HIDE_MS);
     }
 
     function renderChat() {
-      const el = document.getElementById('chat-messages');
-      el.innerHTML = chatMessages.slice(-10).map(m => {
+      const el = document.getElementById('chat-msgs');
+      el.innerHTML = chatMsgs.slice(-12).map(m => {
         const isSelf = m.fromId === myId;
-        return `<div class="chat-msg${isSelf ? ' self' : ''}"><span class="name">${m.from}:</span><span class="text">${m.text}</span></div>`;
+        const isLoud = m.audioLevel >= 0.8;
+        const icon = m.audioLevel >= 0.5 ? '🔊' : m.audioLevel > 0 ? '🔉' : '🔈';
+        return `<div class="cmsg${isSelf?' self':''}${isLoud?' loud':''}"><span class="sender">${m.from}:</span><span class="text">${m.text}</span>${!isSelf?`<span class="audio-icon">${icon}</span>`:''}</div>`;
       }).join('');
       el.scrollTop = el.scrollHeight;
-      el.className = chatMessages.length > 0 ? 'visible' : '';
+      el.className = chatMsgs.length > 0 ? 'visible' : '';
     }
 
     function updateUI() {
-      const zone = players[myId]?.zone || 'open-office';
-      document.getElementById('zone-badge').textContent = zone.replace('-', ' ');
-      document.getElementById('players-count').textContent = `👥 ${Object.keys(players).length} online`;
-      
       const me = players[myId];
-      if (me) {
-        let nearby = 0;
-        for (const [id, p] of Object.entries(players)) {
-          if (id === myId) continue;
-          const dist = Math.sqrt((p.x - me.x)**2 + (p.y - me.y)**2);
-          if (dist <= 3) nearby++;
-        }
-        const banner = document.getElementById('nearby-banner');
-        banner.textContent = nearby > 0 ? `👥 ${nearby} jugador${nearby>1?'es':''} cerca` : '';
-        banner.className = nearby > 0 ? 'visible' : '';
-      }
+      const zone = me?.zone || 'open-office';
+      document.getElementById('zone-badge').querySelector('span:last-child').textContent = zone.replace('-', ' ');
+      
+      // Status badge
+      const statusEl = document.getElementById('my-status-badge');
+      const status = me?.status || 'available';
+      const dot = statusEl.querySelector('.badge-dot');
+      dot.className = 'badge-dot status-' + status;
+      statusEl.querySelector('span:last-child').textContent = STATUS_LABELS[status];
+      
+      document.getElementById('players-count').textContent = `👥 ${Object.keys(players).length}`;
     }
 
-    function clamp(val, min, max) {
-      return Math.max(min, Math.min(max, val));
+    function updateNearbyList() {
+      const el = document.getElementById('nearby-list');
+      const me = players[myId];
+      if (!me) { el.classList.remove('visible'); return; }
+      
+      const nearby = nearbyPlayers.filter(p => p.dist <= 3);
+      el.className = nearby.length > 0 ? 'visible' : '';
+      if (nearby.length === 0) return;
+      
+      let html = '<h4>👥 Cerca de ti</h4>';
+      for (const p of nearby) {
+        const player = players[p.id];
+        if (!player) continue;
+        html += `<div class="nearby-player"><span class="nearby-dot" style="background:${player.color}"></span><span>${p.name}</span><span style="color:${STATUS_COLORS[p.status]||'#78e08f'};font-size:10px">●</span></div>`;
+      }
+      el.innerHTML = html;
     }
+
+    function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
 
     function update() {
       if (!myId || !players[myId] || chatFocused) return;
-      
       const me = players[myId];
-      const speed = 0.1;
+      const spd = 0.1;
       let dx = 0, dy = 0;
+      if (keys['ArrowUp']||keys['w']||keys['W']) dy = -spd;
+      if (keys['ArrowDown']||keys['s']||keys['S']) dy = spd;
+      if (keys['ArrowLeft']||keys['a']||keys['A']) dx = -spd;
+      if (keys['ArrowRight']||keys['d']||keys['D']) dx = spd;
       
-      if (keys['ArrowUp'] || keys['w'] || keys['W']) dy = -speed;
-      if (keys['ArrowDown'] || keys['s'] || keys['S']) dy = speed;
-      if (keys['ArrowLeft'] || keys['a'] || keys['A']) dx = -speed;
-      if (keys['ArrowRight'] || keys['d'] || keys['D']) dx = speed;
-      
-      if (dx !== 0 || dy !== 0) {
+      if (dx || dy) {
         const now = Date.now();
-        if (now - lastMove >= MOVE_THROTTLE) {
-          const newX = clamp(me.x + dx, 0, WORLD_W - 1);
-          const newY = clamp(me.y + dy, 0, WORLD_H - 1);
-          send('move', { x: newX, y: newY });
+        if (now - lastMove >= MOVE_MS) {
+          send('move', { x: clamp(me.x+dx, 0, WORLD_W-1), y: clamp(me.y+dy, 0, WORLD_H-1) });
           lastMove = now;
         }
+      }
+    }
+
+    function drawObject(obj, ox, oy) {
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      switch (obj.type) {
+        case 'desk':
+          ctx.fillStyle = '#3d2914';
+          ctx.fillRect(ox + obj.x*TILE + 2, oy + obj.y*TILE + TILE - 6, obj.w*TILE - 4, 6);
+          ctx.fillStyle = 'rgba(255,255,255,0.04)';
+          ctx.fillRect(ox + obj.x*TILE + 4, oy + obj.y*TILE + 4, obj.w*TILE - 8, TILE - 10);
+          break;
+        case 'plant':
+          ctx.fillStyle = '#2d5a3d';
+          ctx.beginPath();
+          ctx.ellipse(ox + obj.x*TILE + 16, oy + obj.y*TILE + 20, 8, 6, 0, 0, Math.PI*2);
+          ctx.fill();
+          ctx.fillStyle = '#4a3728';
+          ctx.fillRect(ox + obj.x*TILE + 12, oy + obj.y*TILE + 24, 8, 6);
+          break;
+        case 'machine':
+          ctx.fillStyle = '#1a3a5c';
+          ctx.fillRect(ox + obj.x*TILE + 2, oy + obj.y*TILE + 4, obj.w*TILE - 4, obj.h*TILE - 4);
+          ctx.fillStyle = '#e94560';
+          ctx.fillRect(ox + obj.x*TILE + 6, oy + obj.y*TILE + 8, 6, 6);
+          ctx.fillStyle = '#4a69bd';
+          ctx.fillRect(ox + obj.x*TILE + 14, oy + obj.y*TILE + 8, 6, 6);
+          break;
+        case 'table':
+          ctx.fillStyle = '#3d2914';
+          ctx.fillRect(ox + obj.x*TILE + 2, oy + obj.y*TILE + 2, obj.w*TILE - 4, obj.h*TILE - 4);
+          ctx.fillStyle = 'rgba(255,255,255,0.03)';
+          ctx.fillRect(ox + obj.x*TILE + 6, oy + obj.y*TILE + 6, obj.w*TILE - 12, obj.h*TILE - 8);
+          break;
       }
     }
 
@@ -387,7 +469,8 @@
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      // Grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.025)';
       for (let x = 0; x < canvas.width; x += TILE) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
       }
@@ -395,54 +478,75 @@
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
       }
       
-      for (const [name, zone] of Object.entries(zones)) {
+      // Zones + objects
+      for (const [zName, zone] of Object.entries(zones)) {
         const { x, y, width, height, bgColor: zc } = zone;
-        ctx.fillStyle = zc + '33';
-        ctx.fillRect(x * TILE, y * TILE, width * TILE, height * TILE);
-        ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillStyle = zc + '28';
+        ctx.fillRect(x*TILE, y*TILE, width*TILE, height*TILE);
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
         ctx.lineWidth = 2;
-        ctx.strokeRect(x * TILE, y * TILE, width * TILE, height * TILE);
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.fillText(name.replace('-', ' ').toUpperCase(), x * TILE + 6, y * TILE + 14);
+        ctx.strokeRect(x*TILE, y*TILE, width*TILE, height*TILE);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(zName.replace('-', ' ').toUpperCase(), x*TILE + 8, y*TILE + 16);
+        if (zone.objects) {
+          for (const obj of zone.objects) drawObject(obj, 0, 0);
+        }
       }
       
-      for (const [id, p] of Object.entries(players)) {
+      // Players (sorted by y for depth)
+      const sorted = Object.entries(players).sort((a, b) => a[1].y - b[1].y);
+      for (const [id, p] of sorted) {
         const px = p.x * TILE;
         const py = p.y * TILE;
         const isMe = id === myId;
         
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
         ctx.beginPath();
-        ctx.ellipse(px + 16, py + 30, 8, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(px+16, py+30, 10, 4, 0, 0, Math.PI*2);
         ctx.fill();
         
+        // Self ring
         if (isMe) {
-          ctx.strokeStyle = '#fff';
+          ctx.strokeStyle = 'rgba(255,255,255,0.4)';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(px + 16, py + 16, 18, 0, Math.PI * 2);
+          ctx.arc(px+16, py+18, 22, 0, Math.PI*2);
           ctx.stroke();
         }
         
+        // Body
         ctx.fillStyle = p.color || '#e94560';
-        ctx.fillRect(px + 8, py + 10, 16, 16);
+        ctx.fillRect(px+8, py+12, 16, 14);
+        
+        // Head
         ctx.beginPath();
-        ctx.arc(px + 16, py + 8, 6, 0, Math.PI * 2);
+        ctx.arc(px+16, py+10, 7, 0, Math.PI*2);
         ctx.fill();
         
-        ctx.fillStyle = isMe ? '#fff' : 'rgba(255,255,255,0.75)';
-        ctx.font = isMe ? 'bold 9px sans-serif' : '9px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.name, px + 16, py + 38);
+        // Status dot
+        const status = p.status || 'available';
+        ctx.fillStyle = STATUS_COLORS[status];
+        ctx.beginPath();
+        ctx.arc(px+24, py+8, 4, 0, Math.PI*2);
+        ctx.fill();
         
+        // Name
+        ctx.fillStyle = isMe ? '#fff' : 'rgba(255,255,255,0.8)';
+        ctx.font = isMe ? 'bold 10px sans-serif' : '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.name, px+16, py+38);
+        
+        // Proximity ring
         if (!isMe && me) {
-          const dist = Math.sqrt((p.x - me.x)**2 + (p.y - me.y)**2);
+          const dist = Math.sqrt((p.x-me.x)**2 + (p.y-me.y)**2);
           if (dist <= 3) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            const alpha = 0.15 * (1 - dist/3);
+            ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.arc(px + 16, py + 16, 18, 0, Math.PI * 2);
+            ctx.arc(px+16, py+18, 20, 0, Math.PI*2);
             ctx.stroke();
           }
         }
@@ -451,22 +555,35 @@
       requestAnimationFrame(render);
     }
 
-    document.getElementById('chat-send').addEventListener('click', () => {
-      const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if (text && connected) {
-        send('chat', { text });
-        input.value = '';
-      }
+    // Chat
+    document.getElementById('chat-btn').addEventListener('click', () => {
+      const text = document.getElementById('chat-in').value.trim();
+      if (text && connected) { send('chat', { text }); document.getElementById('chat-in').value = ''; }
     });
-    
-    document.getElementById('chat-input').addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('chat-send').click(); }
+    document.getElementById('chat-in').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('chat-btn').click(); }
       e.stopPropagation();
     });
 
+    // Status bar toggle (click zone badge to show)
+    document.getElementById('my-status-badge').addEventListener('click', () => {
+      const bar = document.getElementById('status-bar');
+      bar.className = bar.className === 'visible' ? '' : 'visible';
+    });
+    document.querySelectorAll('.status-option').forEach(el => {
+      el.addEventListener('click', () => {
+        const s = el.dataset.status;
+        myStatus = s;
+        send('status', { status: s });
+        const dot = document.querySelector('#my-status-badge .badge-dot');
+        dot.className = 'badge-dot status-' + s;
+        document.querySelector('#my-status-badge span:last-child').textContent = STATUS_LABELS[s];
+        document.getElementById('status-bar').className = '';
+      });
+    });
+
     document.getElementById('join-btn').addEventListener('click', () => {
-      const name = document.getElementById('name-input').value.trim() || 'Player';
+      const name = document.getElementById('name-in').value.trim() || 'Player';
       if (connected) send('join', { name });
     });
 
