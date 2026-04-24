@@ -665,7 +665,7 @@ document.querySelectorAll('.sopt').forEach(el => {
 
 document.getElementById('login-btn').addEventListener('click', () => {
   const name = document.getElementById('login-name').value.trim() || 'Player';
-  if (connected) send('join', { name: name, sessionId: localStorage.getItem('theoffice_session') });
+  if (connected) { send('join', { name: name, sessionId: localStorage.getItem('theoffice_session') }); } else { showToast('Conectando...'); if (!ws || ws.readyState !== WebSocket.OPEN) connect(); }
   document.getElementById('login-name').value = '';
 });
 
