@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { fileURLToPath } from 'url';
-// import { initDiscordBot, movePlayerToZoneChannel, setVoiceChannels } from './discord.js';
+import { initDiscordBot, movePlayerToZoneChannel, setVoiceChannels } from './discord.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -14,8 +14,7 @@ const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 3000;
 
 // Initialize Discord bot (if token provided)
-const discordEnabled = false; // process.env.DISCORD_BOT_TOKEN && initDiscordBot();
-/*
+const discordEnabled = process.env.DISCORD_BOT_TOKEN && initDiscordBot();
 if (process.env.DISCORD_BOT_TOKEN) {
   setVoiceChannels({
     OFFICE: process.env.DISCORD_VOICE_OFFICE,
@@ -25,7 +24,6 @@ if (process.env.DISCORD_BOT_TOKEN) {
     STUDIO: process.env.DISCORD_VOICE_STUDIO,
   });
 }
-*/
 
 // Game state
 const players = new Map();
@@ -129,11 +127,9 @@ setInterval(() => {
         player.zone = newZone;
         
         // Move Discord voice channel if linked
-        /*
         if (discordEnabled && player.discordUserId) {
           movePlayerToZoneChannel(id, newZone);
         }
-        */
       }
     }
   });
