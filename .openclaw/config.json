@@ -1,0 +1,10 @@
+{
+  "agents": {
+    "defaults": {
+      "timeoutSeconds": 300,
+      "llm": {
+        "idleTimeoutSeconds": 300
+      }
+    }
+  }
+}
