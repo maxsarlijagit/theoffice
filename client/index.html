@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -272,6 +272,14 @@
     };
 
     // Generate all sprites once
+    const ZONE_SPRITE_KEY = {
+      OFFICE: 'floorOffice',
+      FOCUS_ROOM: 'floorFocus',
+      CAFETERIA: 'floorCafeteria',
+      ARCADE: 'floorArcade',
+      STUDIO: 'floorStudio',
+    };
+
     function generateSprites() {
       sprites.wall = generateWallTile();
       sprites.floorOffice = generateFloorTile('OFFICE');
@@ -298,6 +306,7 @@
     }
 
     document.addEventListener('keydown', (e) => {
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
       if (keyMap[e.code]) {
         e.preventDefault();
         pressedKeys.add(keyMap[e.code]);
@@ -306,6 +315,7 @@
     });
 
     document.addEventListener('keyup', (e) => {
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
       if (keyMap[e.code]) {
         pressedKeys.delete(keyMap[e.code]);
         sendInput();
@@ -315,9 +325,7 @@
     function sendInput() {
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       const keys = Array.from(pressedKeys);
-      if (keys.length > 0) {
-        ws.send(JSON.stringify({ type: 'input', keys }));
-      }
+      ws.send(JSON.stringify({ type: 'input', keys }));
     }
 
     // Join game
@@ -471,7 +479,7 @@
               break;
             }
           }
-          const floorSprite = sprites[`floor${zoneName}`] || sprites.floorOffice;
+          const floorSprite = sprites[ZONE_SPRITE_KEY[zoneName]] || sprites.floorOffice;
 
           // Draw based on tile type
           switch (tile) {

@@ -39,8 +39,8 @@ const COLLIDABLE_TILES = [1, 2, 3, 4, 5, 6];
 // Basic room layout (36x22)
 const tilemap = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,2,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,1],
   [1,0,0,2,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,2,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -49,15 +49,15 @@ const tilemap = [
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -98,25 +98,25 @@ function broadcast(message, excludeId = null) {
   });
 }
 
-// Game loop - 20 ticks/second
-const TICK_RATE = 50;
+// Game loop - 10 ticks/second for smooth movement
+const TICK_RATE = 100;
 setInterval(() => {
   players.forEach((player, id) => {
-    if (player.inputQueue && player.inputQueue.length > 0) {
-      const input = player.inputQueue.shift();
+    if (player.currentKeys && player.currentKeys.length > 0) {
+      let targetX = player.x;
+      let targetY = player.y;
       
-      let newX = player.x;
-      let newY = player.y;
+      if (player.currentKeys.includes('w') || player.currentKeys.includes('ArrowUp')) targetY -= 1;
+      if (player.currentKeys.includes('s') || player.currentKeys.includes('ArrowDown')) targetY += 1;
+      if (player.currentKeys.includes('a') || player.currentKeys.includes('ArrowLeft')) targetX -= 1;
+      if (player.currentKeys.includes('d') || player.currentKeys.includes('ArrowRight')) targetX += 1;
       
-      if (input.keys.includes('w') || input.keys.includes('ArrowUp')) newY -= 1;
-      if (input.keys.includes('s') || input.keys.includes('ArrowDown')) newY += 1;
-      if (input.keys.includes('a') || input.keys.includes('ArrowLeft')) newX -= 1;
-      if (input.keys.includes('d') || input.keys.includes('ArrowRight')) newX += 1;
-      
-      // Validate movement
-      if (!isCollidable(newX, newY)) {
-        player.x = newX;
-        player.y = newY;
+      // Validate movement independently for sliding against walls
+      if (!isCollidable(targetX, player.y)) {
+        player.x = targetX;
+      }
+      if (!isCollidable(player.x, targetY)) {
+        player.y = targetY;
       }
       
       // Check zone change
@@ -178,8 +178,6 @@ wss.on('connection', (ws) => {
     try {
       const msg = JSON.parse(data);
       
-      if (playerId && playerId !== msg.myId) return;
-      
       // Rate limiting: max 30 msgs/sec
       const now = Date.now();
       if (now - lastMessageTime < 33) {
@@ -198,8 +196,9 @@ wss.on('connection', (ws) => {
           playerId = uuidv4();
           const name = msg.name || 'Anonymous';
           const color = msg.color || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-          const x = 9; // Start in STUDIO area
-          const y = 16;
+          // Start in STUDIO area with slight random offset to prevent perfect overlap
+          const x = 9 + Math.floor(Math.random() * 5) - 2; // 7 to 11
+          const y = 16 + Math.floor(Math.random() * 5) - 2; // 14 to 18
           
           const player = {
             id: playerId,
@@ -208,7 +207,7 @@ wss.on('connection', (ws) => {
             x,
             y,
             zone: getZone(x, y),
-            inputQueue: [],
+            currentKeys: [],
           };
           
           players.set(playerId, player);
@@ -242,9 +241,7 @@ wss.on('connection', (ws) => {
         case 'input': {
           if (!playerId || !players.has(playerId)) return;
           const player = players.get(playerId);
-          if (player.inputQueue.length < 10) {
-            player.inputQueue.push({ keys: msg.keys });
-          }
+          player.currentKeys = msg.keys;
           resetHeartbeat();
           break;
         }
@@ -313,6 +310,18 @@ wss.on('connection', (ws) => {
       players.delete(playerId);
       broadcast({ type: 'player_left', playerId });
     }
+  });
+});
+
+// Health and stats endpoints
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+app.get('/stats', (req, res) => {
+  res.json({
+    players: players.size,
+    uptime: process.uptime(),
   });
 });
 
