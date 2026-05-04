@@ -63,6 +63,9 @@ const tilemap = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 
+// Track disconnected sessions for reconnections
+const sessionStore = new Map();
+
 // Zone definitions
 const ZONES = {
   OFFICE: { x: 0, y: 0, w: 18, h: 11 },
@@ -103,20 +106,35 @@ const TICK_RATE = 100;
 setInterval(() => {
   players.forEach((player, id) => {
     if (player.currentKeys && player.currentKeys.length > 0) {
-      let targetX = player.x;
-      let targetY = player.y;
+      let dx = 0;
+      let dy = 0;
       
-      if (player.currentKeys.includes('w') || player.currentKeys.includes('ArrowUp')) targetY -= 1;
-      if (player.currentKeys.includes('s') || player.currentKeys.includes('ArrowDown')) targetY += 1;
-      if (player.currentKeys.includes('a') || player.currentKeys.includes('ArrowLeft')) targetX -= 1;
-      if (player.currentKeys.includes('d') || player.currentKeys.includes('ArrowRight')) targetX += 1;
+      if (player.currentKeys.includes('w') || player.currentKeys.includes('ArrowUp')) dy -= 1;
+      if (player.currentKeys.includes('s') || player.currentKeys.includes('ArrowDown')) dy += 1;
+      if (player.currentKeys.includes('a') || player.currentKeys.includes('ArrowLeft')) dx -= 1;
+      if (player.currentKeys.includes('d') || player.currentKeys.includes('ArrowRight')) dx += 1;
       
-      // Validate movement independently for sliding against walls
-      if (!isCollidable(targetX, player.y)) {
-        player.x = targetX;
-      }
-      if (!isCollidable(player.x, targetY)) {
-        player.y = targetY;
+      if (dx !== 0 || dy !== 0) {
+        // Update 8-way direction
+        if (dy < 0 && dx === 0) player.direction = 'N';
+        else if (dy > 0 && dx === 0) player.direction = 'S';
+        else if (dx > 0 && dy === 0) player.direction = 'E';
+        else if (dx < 0 && dy === 0) player.direction = 'W';
+        else if (dy < 0 && dx > 0) player.direction = 'NE';
+        else if (dy < 0 && dx < 0) player.direction = 'NW';
+        else if (dy > 0 && dx > 0) player.direction = 'SE';
+        else if (dy > 0 && dx < 0) player.direction = 'SW';
+
+        let targetX = player.x + dx;
+        let targetY = player.y + dy;
+        
+        // Validate movement independently for sliding against walls
+        if (!isCollidable(targetX, player.y)) {
+          player.x = targetX;
+        }
+        if (!isCollidable(player.x, targetY)) {
+          player.y = targetY;
+        }
       }
       
       // Check zone change
@@ -139,6 +157,8 @@ setInterval(() => {
     id: p.id,
     name: p.name,
     color: p.color,
+    avatarType: p.avatarType,
+    direction: p.direction,
     x: p.x,
     y: p.y,
     zone: p.zone,
@@ -151,7 +171,7 @@ setInterval(() => {
 wss.on('connection', (ws) => {
   let playerId = null;
   let heartbeatTimeout = null;
-  let messageCount = 0;
+  let tokens = 100; // Token bucket for rate limiting
   let lastMessageTime = Date.now();
   
   // Check player limit
@@ -165,50 +185,66 @@ wss.on('connection', (ws) => {
   const resetHeartbeat = () => {
     clearTimeout(heartbeatTimeout);
     heartbeatTimeout = setTimeout(() => {
-      console.log(`[GAME] Player ${playerId} timed out`);
+      console.log(`[GAME] Player ${playerId} timed out due to inactivity`);
       if (playerId && players.has(playerId)) {
         players.delete(playerId);
         broadcast({ type: 'player_left', playerId });
       }
       ws.terminate();
-    }, 30000);
+    }, 300000); // 5 minutes timeout to prevent background tab kicks
   };
   
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data);
       
-      // Rate limiting: max 30 msgs/sec
+      // Rate limiting: 100 msgs/min por conexión
       const now = Date.now();
-      if (now - lastMessageTime < 33) {
-        messageCount++;
-        if (messageCount > 30) {
-          console.log(`[GAME] Rate limit exceeded for ${playerId}`);
-          return;
-        }
-      } else {
-        messageCount = 0;
-        lastMessageTime = now;
+      const elapsed = now - lastMessageTime;
+      tokens = Math.min(100, tokens + (elapsed / 60000) * 100);
+      lastMessageTime = now;
+      
+      if (tokens < 1) {
+        console.log(`[GAME] Rate limit exceeded for ${playerId || 'unknown'}`);
+        return; // Ignore message
       }
+      tokens--;
       
       switch (msg.type) {
         case 'join': {
-          playerId = uuidv4();
+          playerId = msg.sessionId || uuidv4();
           const name = msg.name || 'Anonymous';
           const color = msg.color || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-          // Start in STUDIO area with slight random offset to prevent perfect overlap
-          const x = 9 + Math.floor(Math.random() * 5) - 2; // 7 to 11
-          const y = 16 + Math.floor(Math.random() * 5) - 2; // 14 to 18
+          const avatarType = msg.avatarType || 0;
           
-          const player = {
-            id: playerId,
-            name,
-            color,
-            x,
-            y,
-            zone: getZone(x, y),
-            currentKeys: [],
-          };
+          let player;
+          if (msg.sessionId && sessionStore.has(msg.sessionId)) {
+            // Restore previous session
+            const saved = sessionStore.get(msg.sessionId);
+            player = {
+              ...saved,
+              name, // update name/color if they changed in UI
+              color,
+              avatarType,
+              currentKeys: []
+            };
+          } else {
+            // Start in STUDIO area with slight random offset to prevent perfect overlap
+            const x = 9 + Math.floor(Math.random() * 5) - 2; // 7 to 11
+            const y = 16 + Math.floor(Math.random() * 5) - 2; // 14 to 18
+            
+            player = {
+              id: playerId,
+              name,
+              color,
+              avatarType,
+              direction: 'S',
+              x,
+              y,
+              zone: getZone(x, y),
+              currentKeys: [],
+            };
+          }
           
           players.set(playerId, player);
           ws.playerId = playerId;
@@ -218,6 +254,8 @@ wss.on('connection', (ws) => {
             id: p.id,
             name: p.name,
             color: p.color,
+            avatarType: p.avatarType,
+            direction: p.direction,
             x: p.x,
             y: p.y,
             zone: p.zone,
@@ -232,8 +270,9 @@ wss.on('connection', (ws) => {
           }));
           
           // Broadcast new player
-          broadcast({ type: 'player_joined', player: { id: playerId, name, color, x, y, zone: player.zone } }, playerId);
+          broadcast({ type: 'player_joined', player: { id: playerId, name, color, avatarType: player.avatarType, direction: player.direction, x, y, zone: player.zone } }, playerId);
           
+          resetHeartbeat();
           console.log(`[GAME] Player ${name} (${playerId}) joined`);
           break;
         }
@@ -251,12 +290,11 @@ wss.on('connection', (ws) => {
           const player = players.get(playerId);
           const message = msg.message.substring(0, 200); // Limit message length
           
-          // Proximity chat (4 tiles)
+          // Proximity chat (30 tiles - visible to anyone reasonably close)
           const proximityTargets = [];
           players.forEach((other, id) => {
-            if (id === playerId) return;
             const dist = Math.sqrt(Math.pow(player.x - other.x, 2) + Math.pow(player.y - other.y, 2));
-            if (dist <= 4) {
+            if (dist <= 30) {
               proximityTargets.push(id);
               const otherWs = Array.from(wss.clients).find(c => c.playerId === id);
               if (otherWs && otherWs.readyState === 1) {
@@ -307,6 +345,7 @@ wss.on('connection', (ws) => {
     if (playerId && players.has(playerId)) {
       const player = players.get(playerId);
       console.log(`[GAME] Player ${player.name} disconnected`);
+      sessionStore.set(playerId, { ...player, currentKeys: [] });
       players.delete(playerId);
       broadcast({ type: 'player_left', playerId });
     }

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Office</title>
+  <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap');
     
@@ -20,6 +21,7 @@
     }
     
     #top-bar {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -36,11 +38,9 @@
     #player-count { font-size: 14px; color: #8b949e; }
     
     #canvas-container {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
     }
     
     #game-canvas {
@@ -69,7 +69,7 @@
       background-clip: text;
     }
     
-    #login-screen input {
+    #name-input {
       background: #161b22;
       border: 1px solid #30363d;
       color: #e6edf3;
@@ -81,7 +81,7 @@
       outline: none;
     }
     
-    #login-screen input:focus { border-color: #3b82f6; }
+    #name-input:focus { border-color: #3b82f6; }
     
     #login-screen button {
       background: #3b82f6;
@@ -96,16 +96,79 @@
     
     #login-screen button:hover { background: #2563eb; }
     
+    .avatar-selector {
+      display: flex;
+      gap: 24px;
+      background: #161b22;
+      padding: 20px;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      align-items: center;
+      width: 280px;
+      justify-content: space-between;
+    }
+    
+    .avatar-preview {
+      width: 64px;
+      height: 64px;
+      background: #0d1117;
+      border-radius: 4px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      image-rendering: pixelated;
+    }
+    
+    .controls-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .controls-right {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .controls-left label, .controls-right label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #8b949e;
+      margin-bottom: -4px;
+    }
+    
+    .controls-left select {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      width: 90px;
+      height: 32px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .controls-left select:focus {
+      border-color: #3b82f6;
+    }
+    
     #chat-panel {
       position: fixed;
       right: 0;
-      top: 60px;
+      top: 50px;
       bottom: 0;
       width: 300px;
       background: rgba(13, 17, 23, 0.95);
       border-left: 1px solid #21262d;
       display: none;
       flex-direction: column;
+      z-index: 100;
     }
     
     #chat-panel.visible { display: flex; }
@@ -152,6 +215,7 @@
       border: 1px solid #30363d;
       border-radius: 8px;
       image-rendering: pixelated;
+      z-index: 100;
     }
     
     #zone-notification {
@@ -166,35 +230,125 @@
       pointer-events: none;
       text-shadow: 0 2px 20px rgba(0,0,0,0.8);
       transition: opacity 0.3s;
+      z-index: 100;
     }
     
     #zone-notification.visible { opacity: 1; }
     
     #chat-toggle {
-      position: fixed;
-      right: 20px;
-      top: 70px;
       background: #21262d;
-      border: none;
+      border: 1px solid #30363d;
       color: #8b949e;
-      padding: 8px 16px;
+      padding: 6px 12px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 16px;
+      transition: all 0.2s;
     }
     
-    #chat-toggle:hover { background: #30363d; }
+    #chat-toggle:hover { 
+      background: #30363d; 
+      color: #e6edf3;
+    }
+    
+    #status-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #d73a49;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 2000;
+      display: none;
+    }
+    #status-overlay.visible { display: block; }
+
+    #degraded-notice {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid #d73a49;
+      color: #e6edf3;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      z-index: 100;
+      display: none;
+    }
+    #degraded-notice.visible { display: block; }
+    
+    #quick-chat-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid #30363d;
+      border-radius: 20px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      width: 400px;
+      max-width: calc(100vw - 320px);
+      z-index: 100;
+      transition: border-color 0.2s;
+    }
+
+    #quick-chat-container:focus-within {
+      border-color: #3b82f6;
+    }
+
+    #quick-chat-input {
+      background: transparent;
+      border: none;
+      color: #e6edf3;
+      font-family: inherit;
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+    }
+    
+    #quick-chat-input::placeholder {
+      color: #8b949e;
+    }
   </style>
 </head>
 <body>
-  <div id="top-bar">
-    <div id="zone-display">
-      <div id="zone-indicator"></div>
-      <span id="zone-name">CONNECTING...</span>
-    </div>
-    <span id="player-count">0 online</span>
-  </div>
+  <div id="status-overlay">Connection lost. Reconnecting...</div>
+  <div id="degraded-notice">⚠️ Low Performance Mode Enabled</div>
   
+  <div id="game-ui" style="display: none;">
+    <div id="top-bar">
+      <div id="zone-display">
+        <div id="zone-indicator"></div>
+        <span id="zone-name">CONNECTING...</span>
+      </div>
+      <div style="display: flex; align-items: center;">
+        <span id="player-count">0 online</span>
+        <button id="chat-toggle">GLOBAL</button>
+      </div>
+    </div>
+    
+    <div id="chat-panel">
+      <div id="chat-messages"></div>
+      <div id="chat-input-container">
+        <input type="text" id="chat-input" placeholder="Message...">
+      </div>
+    </div>
+    
+    <canvas id="minimap"></canvas>
+    <div id="zone-notification"></div>
+    
+    <div id="quick-chat-container">
+      <input type="text" id="quick-chat-input" placeholder="Press Enter to chat..." autocomplete="off">
+    </div>
+  </div>
+
   <div id="canvas-container">
     <canvas id="game-canvas"></canvas>
   </div>
@@ -202,19 +356,28 @@
   <div id="login-screen">
     <h1>THE OFFICE</h1>
     <input type="text" id="name-input" placeholder="Your name" maxlength="20">
+    
+    <div class="avatar-selector">
+      <div class="controls-left">
+        <div class="avatar-preview">
+          <canvas id="avatar-preview-canvas" width="64" height="64"></canvas>
+        </div>
+        <label>Type</label>
+        <select id="avatar-type">
+          <option value="0">Default</option>
+          <option value="1">Hat</option>
+          <option value="2">Horns</option>
+          <option value="3">Round</option>
+        </select>
+      </div>
+      <div class="controls-right">
+        <label>Color</label>
+        <div id="color-wheel"></div>
+      </div>
+    </div>
+    
     <button id="join-btn">ENTER</button>
   </div>
-  
-  <div id="chat-panel">
-    <div id="chat-messages"></div>
-    <div id="chat-input-container">
-      <input type="text" id="chat-input" placeholder="Message...">
-    </div>
-  </div>
-  
-  <button id="chat-toggle">GLOBAL</button>
-  <canvas id="minimap"></canvas>
-  <div id="zone-notification"></div>
 
   <script type="module">
     import { generateAvatar, generateChair, generateMonitor, generatePlant, generateTable, generateFloorTile, generateWallTile, generateArcadeMachine } from './art/spriteGenerator.js';
@@ -240,8 +403,13 @@
     // Canvas setup
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
     const minimap = document.getElementById('minimap');
     const minimapCtx = minimap.getContext('2d');
@@ -262,6 +430,39 @@
     let lastTime = 0;
     let frameIndex = 0;
     const frameDuration = 150; // ms per frame
+    
+    // Camera system
+    const zoomLevels = ['auto', 3.0]; // Wide (center) and Full (player tracking)
+    let currentZoomIndex = 1;
+    let isTransitioningCamera = false;
+
+    const camera = {
+      x: CANVAS_WIDTH / 2,
+      y: CANVAS_HEIGHT / 2,
+      zoom: 2.0,
+      targetZoom: 2.0
+    };
+    
+    let lastScrollTime = 0;
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastScrollTime < 150) return; // Debounce to prevent rapid zoom skipping
+      
+      if (e.deltaY > 10) { // Scroll down -> Zoom out
+        if (currentZoomIndex > 0) {
+          currentZoomIndex--;
+          lastScrollTime = now;
+          isTransitioningCamera = true;
+        }
+      } else if (e.deltaY < -10) { // Scroll up -> Zoom in
+        if (currentZoomIndex < zoomLevels.length - 1) {
+          currentZoomIndex++;
+          lastScrollTime = now;
+          isTransitioningCamera = true;
+        }
+      }
+    }, { passive: false });
 
     // Input handling
     const keyMap = {
@@ -297,28 +498,92 @@
     generateSprites();
 
     // Create avatar sprite for a player with animation
-    function getAvatarSprite(color, seed, isMoving = false) {
-      const key = `avatar_${color}_${isMoving ? frameIndex : 'idle'}`;
+    function getAvatarSprite(color, seed, direction, type, isMoving = false) {
+      const key = `avatar_${color}_${type}_${direction}_${isMoving ? frameIndex : 'idle'}`;
       if (!sprites[key]) {
-        sprites[key] = generateAvatar(color, seed, isMoving ? frameIndex : 0);
+        sprites[key] = generateAvatar(color, seed, isMoving ? frameIndex : 0, direction, type);
       }
       return sprites[key];
     }
+    
+    // Avatar preview logic
+    const previewCanvas = document.getElementById('avatar-preview-canvas');
+    const previewCtx = previewCanvas.getContext('2d');
+    const typeSelect = document.getElementById('avatar-type');
+    
+    let selectedColor = '#3b82f6';
+    const colorPicker = new iro.ColorPicker("#color-wheel", {
+      width: 100,
+      color: selectedColor,
+      layout: [
+        {
+          component: iro.ui.Wheel,
+          options: { wheelLightness: true, wheelAngle: 0, wheelDirection: "anticlockwise" }
+        }
+      ]
+    });
+    
+    function updateAvatarPreview() {
+      const type = parseInt(typeSelect.value, 10);
+      const sprite = generateAvatar(selectedColor, 0, 0, 'S', type);
+      
+      previewCtx.clearRect(0, 0, 64, 64);
+      previewCtx.imageSmoothingEnabled = false;
+      previewCtx.drawImage(sprite, 0, 0, 64, 64);
+    }
+    
+    colorPicker.on('color:change', function(color) {
+      selectedColor = color.hexString;
+      updateAvatarPreview();
+    });
+    
+    typeSelect.addEventListener('change', updateAvatarPreview);
+    
+    // Init preview once generator is ready
+    window.addEventListener('load', () => {
+      // Load preferences if available
+      const prefs = localStorage.getItem('theoffice_prefs');
+      if (prefs) {
+        try {
+          const data = JSON.parse(prefs);
+          document.getElementById('name-input').value = data.name;
+          document.getElementById('avatar-type').value = data.avatarType;
+          selectedColor = data.color;
+          colorPicker.color.hexString = selectedColor;
+        } catch (e) {}
+      }
+      setTimeout(updateAvatarPreview, 100);
+    });
 
     document.addEventListener('keydown', (e) => {
       if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      
+      // Press Enter to focus quick chat
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const input = document.getElementById('quick-chat-input');
+        if (input) input.focus();
+        return;
+      }
+      
       if (keyMap[e.code]) {
         e.preventDefault();
-        pressedKeys.add(keyMap[e.code]);
-        sendInput();
+        const key = keyMap[e.code];
+        if (!pressedKeys.has(key)) {
+          pressedKeys.add(key);
+          sendInput();
+        }
       }
     });
 
     document.addEventListener('keyup', (e) => {
       if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
       if (keyMap[e.code]) {
-        pressedKeys.delete(keyMap[e.code]);
-        sendInput();
+        const key = keyMap[e.code];
+        if (pressedKeys.has(key)) {
+          pressedKeys.delete(key);
+          sendInput();
+        }
       }
     });
 
@@ -336,14 +601,31 @@
 
     function joinGame() {
       const name = document.getElementById('name-input').value.trim() || 'Anonymous';
+      const color = selectedColor;
+      const avatarType = parseInt(document.getElementById('avatar-type').value, 10);
+      
+      // Save preferences for next time
+      localStorage.setItem('theoffice_prefs', JSON.stringify({ name, color, avatarType }));
+      
+      const sessionId = localStorage.getItem('theoffice_session');
+      connectToServer(name, color, avatarType, sessionId);
+    }
+    
+    let reconnectAttempts = 0;
+
+    function connectToServer(name, color, avatarType, sessionId) {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       ws = new WebSocket(`${protocol}//${window.location.host}`);
 
       ws.onopen = () => {
+        reconnectAttempts = 0;
+        document.getElementById('status-overlay').classList.remove('visible');
         ws.send(JSON.stringify({
           type: 'join',
           name: name,
-          color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
+          color: color,
+          avatarType: avatarType,
+          sessionId: sessionId
         }));
       };
 
@@ -354,6 +636,16 @@
 
       ws.onclose = () => {
         console.log('Disconnected');
+        document.getElementById('status-overlay').classList.add('visible');
+        
+        // Exponential backoff reconnect
+        if (reconnectAttempts < 10) {
+          const timeout = Math.min(5000, 1000 * Math.pow(1.5, reconnectAttempts));
+          reconnectAttempts++;
+          setTimeout(() => connectToServer(name, color, avatarType, sessionId), timeout);
+        } else {
+          document.getElementById('status-overlay').textContent = "Connection permanently lost. Please refresh.";
+        }
       };
     }
 
@@ -361,22 +653,37 @@
       switch (msg.type) {
         case 'init':
           myId = msg.myId;
-          players = msg.players;
+          localStorage.setItem('theoffice_session', myId);
+          players = msg.players.map(p => ({ ...p, displayX: p.x, displayY: p.y }));
           tilemap = msg.tilemap;
           zones = msg.zones;
           document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('game-ui').style.display = 'block';
           render();
           break;
 
         case 'state':
-          players = msg.players;
+          msg.players.forEach(serverPlayer => {
+            const clientPlayer = players.find(p => p.id === serverPlayer.id);
+            if (clientPlayer) {
+              clientPlayer.x = serverPlayer.x;
+              clientPlayer.y = serverPlayer.y;
+              clientPlayer.zone = serverPlayer.zone;
+              clientPlayer.direction = serverPlayer.direction;
+              clientPlayer.avatarType = serverPlayer.avatarType;
+            } else {
+              players.push({ ...serverPlayer, displayX: serverPlayer.x, displayY: serverPlayer.y });
+            }
+          });
+          
+          players = players.filter(p => msg.players.some(sp => sp.id === p.id));
+          
           const me = players.find(p => p.id === myId);
           if (me && me.zone !== currentZone) {
             showZoneNotification(me.zone);
             currentZone = me.zone;
             updateZoneDisplay();
           }
-          render();
           break;
 
         case 'player_joined':
@@ -432,14 +739,29 @@
       setTimeout(() => notif.classList.remove('visible'), 1500);
     }
 
-    // Chat
-    document.getElementById('chat-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && ws && ws.readyState === WebSocket.OPEN) {
+    const chatInput = document.getElementById('chat-input');
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
         const text = e.target.value.trim();
         if (text) {
           ws.send(JSON.stringify({ type: 'chat', message: text }));
           e.target.value = '';
         }
+      }
+    });
+    
+    const quickChatInput = document.getElementById('quick-chat-input');
+    quickChatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const text = quickChatInput.value.trim();
+        if (text && ws) {
+          ws.send(JSON.stringify({ type: 'chat', message: text }));
+          quickChatInput.value = '';
+        }
+        quickChatInput.blur(); // Unfocus after sending
+      } else if (e.key === 'Escape') {
+        quickChatInput.blur();
       }
     });
 
@@ -459,10 +781,21 @@
 
     // Render
     function render() {
+      // Disable image smoothing for crisp pixel art scaling
+      ctx.imageSmoothingEnabled = false;
+      
       ctx.fillStyle = '#0d1117';
-      ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       if (!tilemap.length) return;
+
+      ctx.save();
+      
+      // Apply camera transforms
+      // Round the translation to prevent sub-pixel jitter
+      ctx.translate(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2));
+      ctx.scale(camera.zoom, camera.zoom);
+      ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
 
       // Draw tilemap with sprites
       for (let y = 0; y < tilemap.length; y++) {
@@ -524,20 +857,28 @@
 
       // Draw players with animated sprites
       players.forEach(player => {
-        const px = player.x * TILE_SIZE;
-        const py = player.y * TILE_SIZE;
+        const px = player.displayX * TILE_SIZE;
+        const py = player.displayY * TILE_SIZE;
 
         const isMoving = pressedKeys.size > 0 && player.id === myId;
-        const avatar = getAvatarSprite(player.color, player.id.charCodeAt(0), isMoving);
+        const direction = player.direction || 'S';
+        const type = player.avatarType || 0;
+        const avatar = getAvatarSprite(player.color, player.id.charCodeAt(0), direction, type, isMoving);
         ctx.drawImage(avatar, px, py);
 
-        // Name with outline
-        ctx.font = '10px "JetBrains Mono", monospace';
+        // Name with outline below the character
+        ctx.font = '8px "JetBrains Mono", monospace';
+        const nameWidth = ctx.measureText(player.name).width;
+        const nameX = px + (TILE_SIZE / 2) - (nameWidth / 2);
+        const nameY = py + TILE_SIZE + 6;
+
         ctx.fillStyle = '#000000';
-        ctx.fillText(player.name, px + 2, py - 2);
+        ctx.fillText(player.name, nameX + 1, nameY + 1);
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(player.name, px + 1, py - 3);
+        ctx.fillText(player.name, nameX, nameY);
       });
+      
+      ctx.restore();
 
       renderMinimap();
     }
@@ -548,22 +889,41 @@
         const b = chatBubbles[i];
         const age = now - b.timestamp;
         if (age > 4000) { chatBubbles.splice(i, 1); continue; }
-        if (age > 2000) b.opacity = 1 - (age - 2000) / 2000;
+        if (age > 3500) b.opacity = 1 - (age - 3500) / 500;
 
-        const px = b.x * TILE_SIZE;
-        const py = b.y * TILE_SIZE - 20;
+        ctx.font = 'bold 9px "Space Grotesk", sans-serif';
+        const textWidth = ctx.measureText(b.text).width;
+        
+        // Bubble dimensions
+        const paddingX = 6;
+        const paddingY = 4;
+        const bubbleW = textWidth + paddingX * 2;
+        const bubbleH = 16;
+        
+        // Center above player
+        const bubbleX = (b.x * TILE_SIZE) + (TILE_SIZE / 2) - (bubbleW / 2);
+        const bubbleY = (b.y * TILE_SIZE) - bubbleH - 6; // slightly above player head
 
-        ctx.font = '10px "Space Grotesk", sans-serif';
-        const w = Math.min(ctx.measureText(b.text).width + 12, 80);
-        ctx.fillStyle = `rgba(22, 27, 34, ${b.opacity * 0.9})`;
+        // Background
+        ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity * 0.95})`;
         ctx.beginPath();
-        ctx.roundRect(px + 2 - w/2 + 8, py, w, 16, 4);
+        ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 6);
         ctx.fill();
-        ctx.strokeStyle = b.color;
+        ctx.strokeStyle = `rgba(0, 0, 0, ${b.opacity * 0.15})`;
         ctx.lineWidth = 1;
         ctx.stroke();
-        ctx.fillStyle = `rgba(230, 237, 243, ${b.opacity})`;
-        ctx.fillText(b.text.substring(0, 10), px + 6, py + 11);
+        
+        // Tail
+        ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity * 0.95})`;
+        ctx.beginPath();
+        ctx.moveTo((b.x * TILE_SIZE) + (TILE_SIZE / 2) - 4, bubbleY + bubbleH - 1);
+        ctx.lineTo((b.x * TILE_SIZE) + (TILE_SIZE / 2) + 4, bubbleY + bubbleH - 1);
+        ctx.lineTo((b.x * TILE_SIZE) + (TILE_SIZE / 2), bubbleY + bubbleH + 4);
+        ctx.fill();
+
+        // Text
+        ctx.fillStyle = `rgba(0, 0, 0, ${b.opacity})`;
+        ctx.fillText(b.text, bubbleX + paddingX, bubbleY + paddingY + 8);
       }
     }
 
@@ -598,8 +958,65 @@
     // Initialize atmosphere
     initAtmosphere();
 
+    // FPS tracking for graceful degradation
+    let fpsFrames = 0;
+    let fpsLastTime = 0;
+    let isDegradedMode = false;
+
     // Animation loop with atmosphere
     let lastFrameTime = 0;
+    
+    function updateCamera() {
+      let targetX = CANVAS_WIDTH / 2;
+      let targetY = CANVAS_HEIGHT / 2;
+      let targetZoom = 1;
+      
+      const me = players.find(p => p.id === myId);
+
+      if (zoomLevels[currentZoomIndex] === 'auto') {
+        // Fit entire map to screen, accounting for UI elements (top bar, chat)
+        const usableWidth = window.innerWidth - 40; // 20px padding on sides
+        const usableHeight = window.innerHeight - 140; // 50px top bar + 90px bottom UI area
+        
+        const scaleX = usableWidth / CANVAS_WIDTH;
+        const scaleY = usableHeight / CANVAS_HEIGHT;
+        targetZoom = Math.min(scaleX, scaleY);
+        
+        // Target is map center
+        targetX = CANVAS_WIDTH / 2;
+        targetY = CANVAS_HEIGHT / 2;
+      } else {
+        targetZoom = zoomLevels[currentZoomIndex];
+        
+        // Target is player
+        if (me) {
+          targetX = me.displayX * TILE_SIZE + TILE_SIZE / 2;
+          targetY = me.displayY * TILE_SIZE + TILE_SIZE / 2;
+        }
+      }
+      
+      camera.targetZoom = targetZoom;
+      camera.zoom += (camera.targetZoom - camera.zoom) * 0.1;
+      
+      if (isTransitioningCamera || zoomLevels[currentZoomIndex] === 'auto') {
+        // Smoothly pan during transition or when in auto mode
+        camera.x += (targetX - camera.x) * 0.08;
+        camera.y += (targetY - camera.y) * 0.08;
+        
+        // If we are tracking the player, check if we arrived to lock the camera
+        if (zoomLevels[currentZoomIndex] !== 'auto') {
+          const dist = Math.abs(targetX - camera.x) + Math.abs(targetY - camera.y);
+          if (dist < 1.0) {
+            isTransitioningCamera = false;
+          }
+        }
+      } else {
+        // Lock position directly to player to prevent camera "catch-up lag"
+        camera.x = targetX;
+        camera.y = targetY;
+      }
+    }
+    
     function animate(timestamp) {
       // Update animation frame every 150ms
       if (timestamp - lastTime > frameDuration) {
@@ -607,11 +1024,34 @@
         lastTime = timestamp;
       }
       
+      // FPS Tracking for Graceful Degradation
+      if (!fpsLastTime) fpsLastTime = timestamp;
+      fpsFrames++;
+      if (timestamp - fpsLastTime >= 2000) {
+        const fps = (fpsFrames * 1000) / (timestamp - fpsLastTime);
+        if (fps < 30 && !isDegradedMode) {
+          console.log(`[PERFORMANCE] Low FPS (${fps.toFixed(1)}). Enabling degraded mode.`);
+          isDegradedMode = true;
+          document.getElementById('degraded-notice').classList.add('visible');
+        }
+        fpsFrames = 0;
+        fpsLastTime = timestamp;
+      }
+      
+      // Lerp player positions for smooth rendering
+      players.forEach(p => {
+        if (p.displayX === undefined) p.displayX = p.x;
+        if (p.displayY === undefined) p.displayY = p.y;
+        p.displayX += (p.x - p.displayX) * 0.3;
+        p.displayY += (p.y - p.displayY) * 0.3;
+      });
+      
+      updateCamera();
       render();
       
-      // Render atmosphere overlay
-      if (isEnabled()) {
-        renderAtmosphere(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, currentZone, timestamp);
+      // Render atmosphere overlay over the full screen
+      if (isEnabled() && !isDegradedMode) {
+        renderAtmosphere(ctx, canvas.width, canvas.height, currentZone, timestamp);
       }
       
       lastFrameTime = timestamp;

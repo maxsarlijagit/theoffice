@@ -41,8 +41,7 @@ function drawDitheredRect(ctx, x, y, w, h, color1, color2, seed, pattern = 0.5) 
   }
 }
 
-// Generate avatar sprite with animation frame (16x16)
-export function generateAvatar(color, seed, frame = 0) {
+export function generateAvatar(color, seed, frame = 0, direction = 'S', type = 0) {
   const canvas = document.createElement('canvas');
   canvas.width = 16;
   canvas.height = 16;
@@ -55,6 +54,21 @@ export function generateAvatar(color, seed, frame = 0) {
   ctx.fillStyle = color;
   ctx.fillRect(3, 4 + offsetY, 10, 10);
   
+  // Avatar type variations
+  if (type === 1) { // Hat
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(2, 2 + offsetY, 12, 3);
+    ctx.fillRect(4, 0 + offsetY, 8, 2);
+  } else if (type === 2) { // Horns
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(3, 2 + offsetY, 2, 2);
+    ctx.fillRect(11, 2 + offsetY, 2, 2);
+  } else if (type === 3) { // Rounder body
+    ctx.fillStyle = color;
+    ctx.fillRect(2, 6 + offsetY, 1, 6);
+    ctx.fillRect(13, 6 + offsetY, 1, 6);
+  }
+  
   // Shadow dither
   ctx.fillStyle = adjustBrightness(color, -30);
   ctx.fillRect(3, 12 + offsetY, 10, 2);
@@ -64,10 +78,22 @@ export function generateAvatar(color, seed, frame = 0) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(5, 5 + offsetY, 4, 4);
   
-  // Eyes (animated blink)
-  ctx.fillStyle = frame === 2 ? '#ffffff' : '#000000'; // Blink on frame 2
-  ctx.fillRect(5, 7 + offsetY, 2, 2);
-  ctx.fillRect(9, 7 + offsetY, 2, 2);
+  // Face rendering based on direction
+  if (direction !== 'N') {
+    // Eyes (animated blink)
+    ctx.fillStyle = frame === 2 ? '#ffffff' : '#000000'; // Blink on frame 2
+    
+    if (direction === 'S') {
+      ctx.fillRect(5, 7 + offsetY, 2, 2);
+      ctx.fillRect(9, 7 + offsetY, 2, 2);
+    } else if (direction === 'E' || direction === 'NE' || direction === 'SE') {
+      ctx.fillRect(9, 7 + offsetY, 2, 2);
+      ctx.fillRect(12, 7 + offsetY, 2, 2);
+    } else if (direction === 'W' || direction === 'NW' || direction === 'SW') {
+      ctx.fillRect(2, 7 + offsetY, 2, 2);
+      ctx.fillRect(5, 7 + offsetY, 2, 2);
+    }
+  }
   
   // Feet movement
   if (frame > 0) {
