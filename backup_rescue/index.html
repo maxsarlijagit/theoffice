@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Office</title>
+  <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Space Grotesk', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #top-bar {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: rgba(13, 17, 23, 0.9);
+      border-bottom: 1px solid #21262d;
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+    
+    #zone-display { display: flex; align-items: center; gap: 10px; }
+    #zone-indicator { width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; }
+    #zone-name { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: #3b82f6; }
+    #player-count { font-size: 14px; color: #8b949e; }
+    
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+    
+    #game-canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    
+    #login-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0d1117;
+      gap: 20px;
+      z-index: 10;
+    }
+    
+    #login-screen h1 {
+      font-size: 48px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #3b82f6, #22c55e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    #name-input {
+      background: #161b22;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      width: 280px;
+      outline: none;
+    }
+    
+    #name-input:focus { border-color: #3b82f6; }
+    
+    #login-screen button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    #login-screen button:hover { background: #2563eb; }
+    
+    .avatar-selector {
+      display: flex;
+      gap: 24px;
+      background: #161b22;
+      padding: 20px;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      align-items: center;
+      width: 280px;
+      justify-content: space-between;
+    }
+    
+    .avatar-preview {
+      width: 64px;
+      height: 64px;
+      background: #0d1117;
+      border-radius: 4px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      image-rendering: pixelated;
+    }
+    
+    .controls-left {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .controls-right {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .controls-left label, .controls-right label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #8b949e;
+      margin-bottom: -4px;
+    }
+    
+    .controls-left select {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 14px;
+      width: 90px;
+      height: 32px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .controls-left select:focus {
+      border-color: #3b82f6;
+    }
+    
+    #chat-panel {
+      position: fixed;
+      right: 0;
+      top: 50px;
+      bottom: 0;
+      width: 300px;
+      background: rgba(13, 17, 23, 0.95);
+      border-left: 1px solid #21262d;
+      display: none;
+      flex-direction: column;
+      z-index: 100;
+    }
+    
+    #chat-panel.visible { display: flex; }
+    
+    #chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+    
+    .chat-message {
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      background: #161b22;
+      border-radius: 8px;
+      font-size: 13px;
+      word-wrap: break-word;
+    }
+    
+    .chat-message .sender { font-weight: 600; margin-bottom: 2px; }
+    .chat-message.global { border-left: 3px solid #f59e0b; }
+    
+    #chat-input-container { padding: 12px; border-top: 1px solid #21262d; }
+    
+    #chat-input {
+      width: 100%;
+      background: #161b22;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    
+    #minimap {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 120px;
+      height: 80px;
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      image-rendering: pixelated;
+      z-index: 100;
+    }
+    
+    #zone-notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      font-weight: 600;
+      color: white;
+      opacity: 0;
+      pointer-events: none;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.8);
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    
+    #zone-notification.visible { opacity: 1; }
+    
+    #chat-toggle {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #8b949e;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 16px;
+      transition: all 0.2s;
+    }
+    
+    #chat-toggle:hover { 
+      background: #30363d; 
+      color: #e6edf3;
+    }
+    
+    #status-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #d73a49;
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 2000;
+      display: none;
+    }
+    #status-overlay.visible { display: block; }
+
+    #degraded-notice {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid #d73a49;
+      color: #e6edf3;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      z-index: 100;
+      display: none;
+    }
+    #degraded-notice.visible { display: block; }
+    
+    #quick-chat-container {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13, 17, 23, 0.85);
+      border: 1px solid #30363d;
+      border-radius: 20px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      width: 400px;
+      max-width: calc(100vw - 320px);
+      z-index: 100;
+      transition: border-color 0.2s;
+    }
+
+    #quick-chat-container:focus-within {
+      border-color: #3b82f6;
+    }
+
+    #quick-chat-input {
+      background: transparent;
+      border: none;
+      color: #e6edf3;
+      font-family: inherit;
+      font-size: 14px;
+      width: 100%;
+      outline: none;
+    }
+    
+    #quick-chat-input::placeholder {
+      color: #8b949e;
+    }
+  </style>
+</head>
+<body>
+  <div id="status-overlay">Connection lost. Reconnecting...</div>
+  <div id="degraded-notice">⚠️ Low Performance Mode Enabled</div>
+  
+  <div id="game-ui" style="display: none;">
+    <div id="top-bar">
+      <div id="zone-display">
+        <div id="zone-indicator"></div>
+        <span id="zone-name">CONNECTING...</span>
+      </div>
+      <div style="display: flex; align-items: center;">
+        <span id="player-count">0 online</span>
+        <button id="chat-toggle">GLOBAL</button>
+      </div>
+    </div>
+    
+    <div id="chat-panel">
+      <div id="chat-messages"></div>
+      <div id="chat-input-container">
+        <input type="text" id="chat-input" placeholder="Message...">
+      </div>
+    </div>
+    
+    <canvas id="minimap"></canvas>
+    <div id="zone-notification"></div>
+    
+    <div id="quick-chat-container">
+      <input type="text" id="quick-chat-input" placeholder="Press Enter to chat..." autocomplete="off">
+    </div>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="game-canvas"></canvas>
+  </div>
+  
+  <div id="login-screen">
+    <h1>THE OFFICE</h1>
+    <input type="text" id="name-input" placeholder="Your name" maxlength="20">
+    
+    <div class="avatar-selector">
+      <div class="controls-left">
+        <div class="avatar-preview">
+          <canvas id="avatar-preview-canvas" width="64" height="64"></canvas>
+        </div>
+        <label>Type</label>
+        <select id="avatar-type">
+          <option value="0">Default</option>
+          <option value="1">Hat</option>
+          <option value="2">Horns</option>
+          <option value="3">Round</option>
+        </select>
+      </div>
+      <div class="controls-right">
+        <label>Color</label>
+        <div id="color-wheel"></div>
+      </div>
+    </div>
+    
+    <button id="join-btn">ENTER</button>
+  </div>
+
+  <script type="module">
+    import { generateAvatar, generateChair, generateMonitor, generatePlant, generateTable, generateFloorTile, generateWallTile, generateArcadeMachine } from './art/spriteGenerator.js';
+    import { initAtmosphere, renderAtmosphere, isEnabled, setAtmosphere } from './art/atmosphere.js';
+
+    const TILE_SIZE = 16;
+    const CANVAS_WIDTH = 36 * TILE_SIZE;
+    const CANVAS_HEIGHT = 22 * TILE_SIZE;
+
+    // Zone colors
+    const ZONE_COLORS = {
+      OFFICE: '#3b82f6',
+      FOCUS_ROOM: '#8b5cf6',
+      CAFETERIA: '#f59e0b',
+      ARCADE: '#ec4899',
+      STUDIO: '#06b6d4',
+    };
+
+    // Sprite cache
+    const sprites = {};
+    let spritesReady = false;
+
+    // Canvas setup
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const minimap = document.getElementById('minimap');
+    const minimapCtx = minimap.getContext('2d');
+    minimap.width = 36;
+    minimap.height = 22;
+
+    // Game state
+    let ws = null;
+    let myId = null;
+    let players = [];
+    let tilemap = [];
+    let zones = {};
+    let currentZone = null;
+    let pressedKeys = new Set();
+    const chatBubbles = [];
+    
+    // Animation state
+    let lastTime = 0;
+    let frameIndex = 0;
+    const frameDuration = 150; // ms per frame
+    
+    // Camera system
+    const zoomLevels = ['auto', 3.0]; // Wide (center) and Full (player tracking)
+    let currentZoomIndex = 1;
+    let isTransitioningCamera = false;
+
+    const camera = {
+      x: CANVAS_WIDTH / 2,
+      y: CANVAS_HEIGHT / 2,
+      zoom: 2.0,
+      targetZoom: 2.0
+    };
+    
+    let lastScrollTime = 0;
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastScrollTime < 150) return; // Debounce to prevent rapid zoom skipping
+      
+      if (e.deltaY > 10) { // Scroll down -> Zoom out
+        if (currentZoomIndex > 0) {
+          currentZoomIndex--;
+          lastScrollTime = now;
+          isTransitioningCamera = true;
+        }
+      } else if (e.deltaY < -10) { // Scroll up -> Zoom in
+        if (currentZoomIndex < zoomLevels.length - 1) {
+          currentZoomIndex++;
+          lastScrollTime = now;
+          isTransitioningCamera = true;
+        }
+      }
+    }, { passive: false });
+
+    // Input handling
+    const keyMap = {
+      'KeyW': 'w', 'ArrowUp': 'w',
+      'KeyS': 's', 'ArrowDown': 's',
+      'KeyA': 'a', 'ArrowLeft': 'a',
+      'KeyD': 'd', 'ArrowRight': 'd',
+    };
+
+    // Generate all sprites once
+    const ZONE_SPRITE_KEY = {
+      OFFICE: 'floorOffice',
+      FOCUS_ROOM: 'floorFocus',
+      CAFETERIA: 'floorCafeteria',
+      ARCADE: 'floorArcade',
+      STUDIO: 'floorStudio',
+    };
+
+    function generateSprites() {
+      sprites.wall = generateWallTile();
+      sprites.floorOffice = generateFloorTile('OFFICE');
+      sprites.floorFocus = generateFloorTile('FOCUS_ROOM');
+      sprites.floorCafeteria = generateFloorTile('CAFETERIA');
+      sprites.floorArcade = generateFloorTile('ARCADE');
+      sprites.floorStudio = generateFloorTile('STUDIO');
+      sprites.chair = generateChair(0);
+      sprites.monitor = generateMonitor(0);
+      sprites.plant = generatePlant(0);
+      sprites.table = generateTable('#065f46');
+      sprites.arcade = generateArcadeMachine(0);
+      spritesReady = true;
+    }
+    generateSprites();
+
+    // Create avatar sprite for a player with animation
+    function getAvatarSprite(color, seed, direction, type, isMoving = false) {
+      const key = `avatar_${color}_${type}_${direction}_${isMoving ? frameIndex : 'idle'}`;
+      if (!sprites[key]) {
+        sprites[key] = generateAvatar(color, seed, isMoving ? frameIndex : 0, direction, type);
+      }
+      return sprites[key];
+    }
+    
+    // Avatar preview logic
+    const previewCanvas = document.getElementById('avatar-preview-canvas');
+    const previewCtx = previewCanvas.getContext('2d');
+    const typeSelect = document.getElementById('avatar-type');
+    
+    let selectedColor = '#3b82f6';
+    const colorPicker = new iro.ColorPicker("#color-wheel", {
+      width: 100,
+      color: selectedColor,
+      layout: [
+        {
+          component: iro.ui.Wheel,
+          options: { wheelLightness: true, wheelAngle: 0, wheelDirection: "anticlockwise" }
+        }
+      ]
+    });
+    
+    function updateAvatarPreview() {
+      const type = parseInt(typeSelect.value, 10);
+      const sprite = generateAvatar(selectedColor, 0, 0, 'S', type);
+      
+      previewCtx.clearRect(0, 0, 64, 64);
+      previewCtx.imageSmoothingEnabled = false;
+      previewCtx.drawImage(sprite, 0, 0, 64, 64);
+    }
+    
+    colorPicker.on('color:change', function(color) {
+      selectedColor = color.hexString;
+      updateAvatarPreview();
+    });
+    
+    typeSelect.addEventListener('change', updateAvatarPreview);
+    
+    // Init preview once generator is ready
+    window.addEventListener('load', () => {
+      // Load preferences if available
+      const prefs = localStorage.getItem('theoffice_prefs');
+      if (prefs) {
+        try {
+          const data = JSON.parse(prefs);
+          document.getElementById('name-input').value = data.name;
+          document.getElementById('avatar-type').value = data.avatarType;
+          selectedColor = data.color;
+          colorPicker.color.hexString = selectedColor;
+        } catch (e) {}
+      }
+      setTimeout(updateAvatarPreview, 100);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      
+      // Press Enter to focus quick chat
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const input = document.getElementById('quick-chat-input');
+        if (input) input.focus();
+        return;
+      }
+      
+      if (keyMap[e.code]) {
+        e.preventDefault();
+        const key = keyMap[e.code];
+        if (!pressedKeys.has(key)) {
+          pressedKeys.add(key);
+          sendInput();
+        }
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      if (keyMap[e.code]) {
+        const key = keyMap[e.code];
+        if (pressedKeys.has(key)) {
+          pressedKeys.delete(key);
+          sendInput();
+        }
+      }
+    });
+
+    function sendInput() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const keys = Array.from(pressedKeys);
+      ws.send(JSON.stringify({ type: 'input', keys }));
+    }
+
+    // Join game
+    document.getElementById('join-btn').addEventListener('click', joinGame);
+    document.getElementById('name-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') joinGame();
+    });
+
+    function joinGame() {
+      const name = document.getElementById('name-input').value.trim() || 'Anonymous';
+      const color = selectedColor;
+      const avatarType = parseInt(document.getElementById('avatar-type').value, 10);
+      
+      // Save preferences for next time
+      localStorage.setItem('theoffice_prefs', JSON.stringify({ name, color, avatarType }));
+      
+      const sessionId = localStorage.getItem('theoffice_session');
+      connectToServer(name, color, avatarType, sessionId);
+    }
+    
+    let reconnectAttempts = 0;
+
+    function connectToServer(name, color, avatarType, sessionId) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+        document.getElementById('status-overlay').classList.remove('visible');
+        ws.send(JSON.stringify({
+          type: 'join',
+          name: name,
+          color: color,
+          avatarType: avatarType,
+          sessionId: sessionId
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        handleMessage(msg);
+      };
+
+      ws.onclose = () => {
+        console.log('Disconnected');
+        document.getElementById('status-overlay').classList.add('visible');
+        
+        // Exponential backoff reconnect
+        if (reconnectAttempts < 10) {
+          const timeout = Math.min(5000, 1000 * Math.pow(1.5, reconnectAttempts));
+          reconnectAttempts++;
+          setTimeout(() => connectToServer(name, color, avatarType, sessionId), timeout);
+        } else {
+          document.getElementById('status-overlay').textContent = "Connection permanently lost. Please refresh.";
+        }
+      };
+    }
+
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'init':
+          myId = msg.myId;
+          localStorage.setItem('theoffice_session', myId);
+          players = msg.players.map(p => ({ ...p, displayX: p.x, displayY: p.y }));
+          tilemap = msg.tilemap;
+          zones = msg.zones;
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('game-ui').style.display = 'block';
+          render();
+          break;
+
+        case 'state':
+          msg.players.forEach(serverPlayer => {
+            const clientPlayer = players.find(p => p.id === serverPlayer.id);
+            if (clientPlayer) {
+              clientPlayer.x = serverPlayer.x;
+              clientPlayer.y = serverPlayer.y;
+              clientPlayer.zone = serverPlayer.zone;
+              clientPlayer.direction = serverPlayer.direction;
+              clientPlayer.avatarType = serverPlayer.avatarType;
+            } else {
+              players.push({ ...serverPlayer, displayX: serverPlayer.x, displayY: serverPlayer.y });
+            }
+          });
+          
+          players = players.filter(p => msg.players.some(sp => sp.id === p.id));
+          
+          const me = players.find(p => p.id === myId);
+          if (me && me.zone !== currentZone) {
+            showZoneNotification(me.zone);
+            currentZone = me.zone;
+            updateZoneDisplay();
+          }
+          break;
+
+        case 'player_joined':
+          players.push(msg.player);
+          break;
+
+        case 'player_left':
+          players = players.filter(p => p.id !== msg.playerId);
+          break;
+
+        case 'zone_enter':
+          const entering = players.find(p => p.id === msg.playerId);
+          if (entering) {
+            entering.zone = msg.zone;
+            if (entering.id === myId) {
+              showZoneNotification(msg.zone);
+              currentZone = msg.zone;
+              updateZoneDisplay();
+            }
+          }
+          break;
+
+        case 'zone_leave':
+          const leaving = players.find(p => p.id === msg.playerId);
+          if (leaving) leaving.zone = msg.zone;
+          break;
+
+        case 'chat':
+          if (msg.proximity) {
+            chatBubbles.push({
+              from: msg.from, color: msg.color, text: msg.message,
+              x: msg.x, y: msg.y, timestamp: Date.now(), opacity: 1,
+            });
+          }
+          if (msg.global) addChatMessage(msg.from, msg.color, msg.message, true);
+          break;
+      }
+
+      document.getElementById('player-count').textContent = `${players.length} online`;
+    }
+
+    function updateZoneDisplay() {
+      const color = ZONE_COLORS[currentZone] || '#3b82f6';
+      document.getElementById('zone-name').textContent = currentZone || 'UNKNOWN';
+      document.getElementById('zone-name').style.color = color;
+      document.getElementById('zone-indicator').style.background = color;
+    }
+
+    function showZoneNotification(zone) {
+      const notif = document.getElementById('zone-notification');
+      notif.textContent = zone;
+      notif.classList.add('visible');
+      setTimeout(() => notif.classList.remove('visible'), 1500);
+    }
+
+    const chatInput = document.getElementById('chat-input');
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const text = e.target.value.trim();
+        if (text) {
+          ws.send(JSON.stringify({ type: 'chat', message: text }));
+          e.target.value = '';
+        }
+      }
+    });
+    
+    const quickChatInput = document.getElementById('quick-chat-input');
+    quickChatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const text = quickChatInput.value.trim();
+        if (text && ws) {
+          ws.send(JSON.stringify({ type: 'chat', message: text }));
+          quickChatInput.value = '';
+        }
+        quickChatInput.blur(); // Unfocus after sending
+      } else if (e.key === 'Escape') {
+        quickChatInput.blur();
+      }
+    });
+
+    document.getElementById('chat-toggle').addEventListener('click', () => {
+      document.getElementById('chat-panel').classList.toggle('visible');
+    });
+
+    function addChatMessage(sender, color, text, global) {
+      const container = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'chat-message' + (global ? ' global' : '');
+      div.innerHTML = `<div class="sender" style="color:${color}">${sender}</div><div class="text">${text}</div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      while (container.children.length > 50) container.removeChild(container.firstChild);
+    }
+
+    // Render
+    function render() {
+      // Disable image smoothing for crisp pixel art scaling
+      ctx.imageSmoothingEnabled = false;
+      
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!tilemap.length) return;
+
+      ctx.save();
+      
+      // Apply camera transforms
+      // Round the translation to prevent sub-pixel jitter
+      ctx.translate(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2));
+      ctx.scale(camera.zoom, camera.zoom);
+      ctx.translate(-Math.round(camera.x), -Math.round(camera.y));
+
+      // Draw tilemap with sprites
+      for (let y = 0; y < tilemap.length; y++) {
+        for (let x = 0; x < tilemap[y].length; x++) {
+          const tile = tilemap[y][x];
+          const px = x * TILE_SIZE;
+          const py = y * TILE_SIZE;
+
+          // Zone detection for floor
+          let zoneName = 'OFFICE';
+          for (const [name, z] of Object.entries(zones)) {
+            if (x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) {
+              zoneName = name;
+              break;
+            }
+          }
+          const floorSprite = sprites[ZONE_SPRITE_KEY[zoneName]] || sprites.floorOffice;
+
+          // Draw based on tile type
+          switch (tile) {
+            case 0:
+              ctx.drawImage(floorSprite, px, py);
+              break;
+            case 1:
+              ctx.drawImage(sprites.wall, px, py);
+              break;
+            case 2:
+              ctx.drawImage(floorSprite, px, py);
+              ctx.drawImage(sprites.chair, px, py);
+              break;
+            case 3:
+              ctx.drawImage(floorSprite, px, py);
+              ctx.drawImage(sprites.monitor, px, py);
+              break;
+            case 4:
+              ctx.drawImage(floorSprite, px, py);
+              ctx.drawImage(sprites.plant, px, py);
+              break;
+            case 5:
+              ctx.drawImage(floorSprite, px, py);
+              ctx.drawImage(sprites.table, px, py);
+              break;
+            case 6: // Arcade machine
+              ctx.drawImage(floorSprite, px, py);
+              ctx.drawImage(sprites.arcade, px, py);
+              break;
+          }
+        }
+      }
+
+      // Zone separators
+      Object.entries(zones).forEach(([name, zone]) => {
+        ctx.strokeStyle = ZONE_COLORS[name] + '40';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(zone.x * TILE_SIZE, zone.y * TILE_SIZE, zone.w * TILE_SIZE, zone.h * TILE_SIZE);
+      });
+
+      renderChatBubbles();
+
+      // Draw players with animated sprites
+      players.forEach(player => {
+        const px = player.displayX * TILE_SIZE;
+        const py = player.displayY * TILE_SIZE;
+
+        const isMoving = pressedKeys.size > 0 && player.id === myId;
+        const direction = player.direction || 'S';
+        const type = player.avatarType || 0;
+        const avatar = getAvatarSprite(player.color, player.id.charCodeAt(0), direction, type, isMoving);
+        ctx.drawImage(avatar, px, py);
+
+        // Name with outline below the character
+        ctx.font = '8px "JetBrains Mono", monospace';
+        const nameWidth = ctx.measureText(player.name).width;
+        const nameX = px + (TILE_SIZE / 2) - (nameWidth / 2);
+        const nameY = py + TILE_SIZE + 6;
+
+        ctx.fillStyle = '#000000';
+        ctx.fillText(player.name, nameX + 1, nameY + 1);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(player.name, nameX, nameY);
+      });
+      
+      ctx.restore();
+
+      renderMinimap();
+    }
+
+    function renderChatBubbles() {
+      const now = Date.now();
+      for (let i = chatBubbles.length - 1; i >= 0; i--) {
+        const b = chatBubbles[i];
+        const age = now - b.timestamp;
+        if (age > 4000) { chatBubbles.splice(i, 1); continue; }
+        if (age > 3500) b.opacity = 1 - (age - 3500) / 500;
+
+        ctx.font = 'bold 9px "Space Grotesk", sans-serif';
+        const textWidth = ctx.measureText(b.text).width;
+        
+        // Bubble dimensions
+        const paddingX = 6;
+        const paddingY = 4;
+        const bubbleW = textWidth + paddingX * 2;
+        const bubbleH = 16;
+        
+        // Center above player
+        const bubbleX = (b.x * TILE_SIZE) + (TILE_SIZE / 2) - (bubbleW / 2);
+        const bubbleY = (b.y * TILE_SIZE) - bubbleH - 6; // slightly above player head
+
+        // Background
+        ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity * 0.95})`;
+        ctx.beginPath();
+        ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 6);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(0, 0, 0, ${b.opacity * 0.15})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Tail
+        ctx.fillStyle = `rgba(255, 255, 255, ${b.opacity * 0.95})`;
+        ctx.beginPath();
+        ctx.moveTo((b.x * TILE_SIZE) + (TILE_SIZE / 2) - 4, bubbleY + bubbleH - 1);
+        ctx.lineTo((b.x * TILE_SIZE) + (TILE_SIZE / 2) + 4, bubbleY + bubbleH - 1);
+        ctx.lineTo((b.x * TILE_SIZE) + (TILE_SIZE / 2), bubbleY + bubbleH + 4);
+        ctx.fill();
+
+        // Text
+        ctx.fillStyle = `rgba(0, 0, 0, ${b.opacity})`;
+        ctx.fillText(b.text, bubbleX + paddingX, bubbleY + paddingY + 8);
+      }
+    }
+
+    function renderMinimap() {
+      minimapCtx.fillStyle = '#0d1117';
+      minimapCtx.fillRect(0, 0, 36, 22);
+
+      if (!tilemap.length) return;
+
+      for (let y = 0; y < tilemap.length; y++) {
+        for (let x = 0; x < tilemap[y].length; x++) {
+          if (tilemap[y][x] > 0) {
+            minimapCtx.fillStyle = '#334155';
+            minimapCtx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+
+      players.forEach(p => {
+        minimapCtx.fillStyle = p.color;
+        minimapCtx.fillRect(p.x, p.y, 1, 1);
+      });
+    }
+
+    // Heartbeat
+    setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'heartbeat' }));
+      }
+    }, 10000);
+
+    // Initialize atmosphere
+    initAtmosphere();
+
+    // FPS tracking for graceful degradation
+    let fpsFrames = 0;
+    let fpsLastTime = 0;
+    let isDegradedMode = false;
+
+    // Animation loop with atmosphere
+    let lastFrameTime = 0;
+    
+    function updateCamera() {
+      let targetX = CANVAS_WIDTH / 2;
+      let targetY = CANVAS_HEIGHT / 2;
+      let targetZoom = 1;
+      
+      const me = players.find(p => p.id === myId);
+
+      if (zoomLevels[currentZoomIndex] === 'auto') {
+        // Fit entire map to screen, accounting for UI elements (top bar, chat)
+        const usableWidth = window.innerWidth - 40; // 20px padding on sides
+        const usableHeight = window.innerHeight - 140; // 50px top bar + 90px bottom UI area
+        
+        const scaleX = usableWidth / CANVAS_WIDTH;
+        const scaleY = usableHeight / CANVAS_HEIGHT;
+        targetZoom = Math.min(scaleX, scaleY);
+        
+        // Target is map center
+        targetX = CANVAS_WIDTH / 2;
+        targetY = CANVAS_HEIGHT / 2;
+      } else {
+        targetZoom = zoomLevels[currentZoomIndex];
+        
+        // Target is player
+        if (me) {
+          targetX = me.displayX * TILE_SIZE + TILE_SIZE / 2;
+          targetY = me.displayY * TILE_SIZE + TILE_SIZE / 2;
+        }
+      }
+      
+      camera.targetZoom = targetZoom;
+      camera.zoom += (camera.targetZoom - camera.zoom) * 0.1;
+      
+      if (isTransitioningCamera || zoomLevels[currentZoomIndex] === 'auto') {
+        // Smoothly pan during transition or when in auto mode
+        camera.x += (targetX - camera.x) * 0.08;
+        camera.y += (targetY - camera.y) * 0.08;
+        
+        // If we are tracking the player, check if we arrived to lock the camera
+        if (zoomLevels[currentZoomIndex] !== 'auto') {
+          const dist = Math.abs(targetX - camera.x) + Math.abs(targetY - camera.y);
+          if (dist < 1.0) {
+            isTransitioningCamera = false;
+          }
+        }
+      } else {
+        // Lock position directly to player to prevent camera "catch-up lag"
+        camera.x = targetX;
+        camera.y = targetY;
+      }
+    }
+    
+    function animate(timestamp) {
+      // Update animation frame every 150ms
+      if (timestamp - lastTime > frameDuration) {
+        frameIndex = (frameIndex + 1) % 4;
+        lastTime = timestamp;
+      }
+      
+      // FPS Tracking for Graceful Degradation
+      if (!fpsLastTime) fpsLastTime = timestamp;
+      fpsFrames++;
+      if (timestamp - fpsLastTime >= 2000) {
+        const fps = (fpsFrames * 1000) / (timestamp - fpsLastTime);
+        if (fps < 30 && !isDegradedMode) {
+          console.log(`[PERFORMANCE] Low FPS (${fps.toFixed(1)}). Enabling degraded mode.`);
+          isDegradedMode = true;
+          document.getElementById('degraded-notice').classList.add('visible');
+        }
+        fpsFrames = 0;
+        fpsLastTime = timestamp;
+      }
+      
+      // Lerp player positions for smooth rendering
+      players.forEach(p => {
+        if (p.displayX === undefined) p.displayX = p.x;
+        if (p.displayY === undefined) p.displayY = p.y;
+        p.displayX += (p.x - p.displayX) * 0.3;
+        p.displayY += (p.y - p.displayY) * 0.3;
+      });
+      
+      updateCamera();
+      render();
+      
+      // Render atmosphere overlay over the full screen
+      if (isEnabled() && !isDegradedMode) {
+        renderAtmosphere(ctx, canvas.width, canvas.height, currentZone, timestamp);
+      }
+      
+      lastFrameTime = timestamp;
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>

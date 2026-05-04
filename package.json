@@ -13,7 +13,11 @@
   "dependencies": {
     "discord.js": "^14.26.3",
     "express": "^4.18.2",
-    "ws": "^8.16.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "phaser": "^4.1.0",
+    "vite": "^8.0.10"
   }
 }
