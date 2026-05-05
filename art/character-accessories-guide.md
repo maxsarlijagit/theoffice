@@ -25,6 +25,9 @@ Para mantener la consistencia en todos los tonos de piel, se deben usar estos va
 
 > [!TIP]
 > El asset base oficial se encuentra en: [avatar-zero-base.png](file:///e:/Formación%20Technical%20Artist/Repo%20Github/theoffice/art/avatar-zero-base.png)
+>
+> **Versión Modular**: Los componentes separados para pruebas se encuentran en la carpeta `art/modular/` (`head.png`, `torso.png`, `legs.png`).
+> Puedes probar la modularidad usando el: [avatar_previewer.html](file:///e:/Formación%20Technical%20Artist/Repo%20Github/theoffice/art/avatar_previewer.html)
 
 ---
 
