@@ -65,6 +65,7 @@ const tilemap = [
 
 // Track disconnected sessions for reconnections
 const sessionStore = new Map();
+const sessionTimers = new Map();
 
 // Zone definitions
 const ZONES = {
@@ -152,19 +153,32 @@ setInterval(() => {
     }
   });
   
-  // Broadcast state
-  const playerState = Array.from(players.values()).map(p => ({
-    id: p.id,
-    name: p.name,
-    color: p.color,
-    avatarType: p.avatarType,
-    direction: p.direction,
-    x: p.x,
-    y: p.y,
-    zone: p.zone,
-  }));
-  
-  broadcast({ type: 'state', players: playerState });
+  // Broadcast state ONLY if someone moved or state changed
+  let stateChanged = false;
+  players.forEach(p => {
+    if (p.currentKeys && p.currentKeys.length > 0) {
+      stateChanged = true;
+    }
+  });
+
+  // Force broadcast every 10 ticks (1 second) to keep clients synced
+  // or immediately if someone moved.
+  const now = Date.now();
+  if (stateChanged || !global.lastBroadcastTime || now - global.lastBroadcastTime > 1000) {
+    const playerState = Array.from(players.values()).map(p => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      avatarType: p.avatarType,
+      direction: p.direction,
+      x: p.x,
+      y: p.y,
+      zone: p.zone,
+    }));
+    
+    broadcast({ type: 'state', players: playerState });
+    global.lastBroadcastTime = now;
+  }
 }, TICK_RATE);
 
 // WebSocket connection handler
@@ -213,12 +227,26 @@ wss.on('connection', (ws) => {
       switch (msg.type) {
         case 'join': {
           playerId = msg.sessionId || uuidv4();
-          const name = msg.name || 'Anonymous';
-          const color = msg.color || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-          const avatarType = msg.avatarType || 0;
+          
+          // Input Validation & XSS Protection
+          let name = msg.name || 'Anonymous';
+          name = name.replace(/[<>]/g, '').trim().substring(0, 20) || 'Anonymous';
+          
+          let color = msg.color || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+          if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+            color = '#ffffff'; // Fallback
+          }
+          
+          const avatarType = parseInt(msg.avatarType) || 0;
           
           let player;
           if (msg.sessionId && sessionStore.has(msg.sessionId)) {
+            // Clear eviction timer if reconnecting
+            if (sessionTimers.has(msg.sessionId)) {
+              clearTimeout(sessionTimers.get(msg.sessionId));
+              sessionTimers.delete(msg.sessionId);
+            }
+            
             // Restore previous session
             const saved = sessionStore.get(msg.sessionId);
             player = {
@@ -288,7 +316,11 @@ wss.on('connection', (ws) => {
         case 'chat': {
           if (!playerId || !players.has(playerId)) return;
           const player = players.get(playerId);
-          const message = msg.message.substring(0, 200); // Limit message length
+          
+          // XSS Protection & Length limit
+          let message = msg.message || '';
+          message = message.replace(/[<>]/g, '').trim().substring(0, 200);
+          if (!message) return;
           
           // Proximity chat (30 tiles - visible to anyone reasonably close)
           const proximityTargets = [];
@@ -348,6 +380,14 @@ wss.on('connection', (ws) => {
       sessionStore.set(playerId, { ...player, currentKeys: [] });
       players.delete(playerId);
       broadcast({ type: 'player_left', playerId });
+      
+      // Evict from memory after 15 minutes to prevent leak
+      const timer = setTimeout(() => {
+        sessionStore.delete(playerId);
+        sessionTimers.delete(playerId);
+        console.log(`[GAME] Session ${playerId} evicted from memory.`);
+      }, 15 * 60 * 1000);
+      sessionTimers.set(playerId, timer);
     }
   });
 });
