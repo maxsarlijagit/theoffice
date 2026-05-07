@@ -7,8 +7,12 @@
   "private": true,
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node --watch server/index.js",
-    "build": "echo 'No build step for vanilla JS'"
+    "server": "node --watch server/index.js",
+    "client": "vite",
+    "editor": "npm run dev --prefix iso-layout-editor",
+    "dev": "npm run server & npm run client",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "discord.js": "^14.26.3",
