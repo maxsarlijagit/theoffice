@@ -61,5 +61,9 @@
     { "x": 5, "y": 5, "edge": "left" },
     { "x": 7, "y": 5, "edge": "right" },
     { "x": 7, "y": 6, "edge": "right" }
+  ],
+  "furniture": [
+    { "x": 6, "y": 5, "type": "placeholder_cube" },
+    { "x": 8, "y": 6, "type": "placeholder_plane" }
   ]
 }
