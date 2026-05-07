@@ -32,13 +32,14 @@ function create() {
     const originX = this.cameras.main.centerX;
     const originY = this.cameras.main.centerY - (map.grid.height * tileHeight / 2);
 
-    // Renderizado de tiles de suelo
+    // Renderizado de tiles de suelo con Z-Sorting
     map.tiles.forEach(tile => {
         const isoX = (tile.x - tile.y) * (tileWidth / 2);
         const isoY = (tile.x + tile.y) * (tileHeight / 2);
         
         const color = Phaser.Display.Color.HexStringToColor(map.areaStyles[tile.area].color).color;
         
+        // Se crea un objeto Graphics individual para permitir el uso de Depth
         const graphics = this.add.graphics();
         graphics.fillStyle(color, 0.8);
         graphics.lineStyle(1, 0xffffff, 0.3);
@@ -52,9 +53,40 @@ function create() {
         
         graphics.fillPoints(points, true);
         graphics.strokePoints(points, true);
+
+        // Z-Sorting: El depth es proporcional a la posición Y proyectada
+        // Se suma el isoY para que tiles "más abajo" se dibujen sobre los "más arriba"
+        graphics.setDepth(isoY);
     });
 
-    this.add.text(10, 10, "PHASER 3 ENGINE: ISO_RENDER_V1", {
+    // Renderizado de paredes con Z-Sorting
+    map.walls.forEach(wall => {
+        const isoX = (wall.x - wall.y) * (tileWidth / 2);
+        const isoY = (wall.x + wall.y) * (tileHeight / 2);
+        
+        const top = { x: originX + isoX, y: originY + isoY };
+        const right = { x: originX + isoX + tileWidth / 2, y: originY + isoY + tileHeight / 2 };
+        const bottom = { x: originX + isoX, y: originY + isoY + tileHeight };
+        const left = { x: originX + isoX - tileWidth / 2, y: originY + isoY + tileHeight / 2 };
+
+        const wallGraphics = this.add.graphics();
+        wallGraphics.lineStyle(4, 0xffffff, 1); // Pared blanca sólida de 4px
+
+        if (wall.edge === 'top') {
+            wallGraphics.lineBetween(top.x, top.y, right.x, right.y);
+        } else if (wall.edge === 'right') {
+            wallGraphics.lineBetween(right.x, right.y, bottom.x, bottom.y);
+        } else if (wall.edge === 'bottom') {
+            wallGraphics.lineBetween(bottom.x, bottom.y, left.x, left.y);
+        } else if (wall.edge === 'left') {
+            wallGraphics.lineBetween(left.x, left.y, top.x, top.y);
+        }
+
+        // El depth de la pared es el mismo que el del tile para mantener consistencia
+        wallGraphics.setDepth(isoY + 1); // +1 para asegurar que esté sobre el tile de suelo
+    });
+
+    this.add.text(10, 10, "PHASER 3 ENGINE: ISO_RENDER_V1 (Z-SORT ACTIVE)", {
         fontFamily: 'JetBrains Mono',
         fontSize: '16px',
         fill: '#ffffff'
