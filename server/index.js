@@ -39,8 +39,8 @@ const COLLIDABLE_TILES = [1, 2, 3, 4, 5, 6];
 // Basic room layout (36x22)
 const tilemap = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,2,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,1],
   [1,0,0,2,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,2,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
@@ -49,19 +49,23 @@ const tilemap = [
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,0,0,0,0,0,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0,0,0,0,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
+
+// Track disconnected sessions for reconnections
+const sessionStore = new Map();
+const sessionTimers = new Map();
 
 // Zone definitions
 const ZONES = {
@@ -98,25 +102,40 @@ function broadcast(message, excludeId = null) {
   });
 }
 
-// Game loop - 20 ticks/second
-const TICK_RATE = 50;
+// Game loop - 10 ticks/second for smooth movement
+const TICK_RATE = 100;
 setInterval(() => {
   players.forEach((player, id) => {
-    if (player.inputQueue && player.inputQueue.length > 0) {
-      const input = player.inputQueue.shift();
+    if (player.currentKeys && player.currentKeys.length > 0) {
+      let dx = 0;
+      let dy = 0;
       
-      let newX = player.x;
-      let newY = player.y;
+      if (player.currentKeys.includes('w') || player.currentKeys.includes('ArrowUp')) dy -= 1;
+      if (player.currentKeys.includes('s') || player.currentKeys.includes('ArrowDown')) dy += 1;
+      if (player.currentKeys.includes('a') || player.currentKeys.includes('ArrowLeft')) dx -= 1;
+      if (player.currentKeys.includes('d') || player.currentKeys.includes('ArrowRight')) dx += 1;
       
-      if (input.keys.includes('w') || input.keys.includes('ArrowUp')) newY -= 1;
-      if (input.keys.includes('s') || input.keys.includes('ArrowDown')) newY += 1;
-      if (input.keys.includes('a') || input.keys.includes('ArrowLeft')) newX -= 1;
-      if (input.keys.includes('d') || input.keys.includes('ArrowRight')) newX += 1;
-      
-      // Validate movement
-      if (!isCollidable(newX, newY)) {
-        player.x = newX;
-        player.y = newY;
+      if (dx !== 0 || dy !== 0) {
+        // Update 8-way direction
+        if (dy < 0 && dx === 0) player.direction = 'N';
+        else if (dy > 0 && dx === 0) player.direction = 'S';
+        else if (dx > 0 && dy === 0) player.direction = 'E';
+        else if (dx < 0 && dy === 0) player.direction = 'W';
+        else if (dy < 0 && dx > 0) player.direction = 'NE';
+        else if (dy < 0 && dx < 0) player.direction = 'NW';
+        else if (dy > 0 && dx > 0) player.direction = 'SE';
+        else if (dy > 0 && dx < 0) player.direction = 'SW';
+
+        let targetX = player.x + dx;
+        let targetY = player.y + dy;
+        
+        // Validate movement independently for sliding against walls
+        if (!isCollidable(targetX, player.y)) {
+          player.x = targetX;
+        }
+        if (!isCollidable(player.x, targetY)) {
+          player.y = targetY;
+        }
       }
       
       // Check zone change
@@ -134,24 +153,39 @@ setInterval(() => {
     }
   });
   
-  // Broadcast state
-  const playerState = Array.from(players.values()).map(p => ({
-    id: p.id,
-    name: p.name,
-    color: p.color,
-    x: p.x,
-    y: p.y,
-    zone: p.zone,
-  }));
-  
-  broadcast({ type: 'state', players: playerState });
+  // Broadcast state ONLY if someone moved or state changed
+  let stateChanged = false;
+  players.forEach(p => {
+    if (p.currentKeys && p.currentKeys.length > 0) {
+      stateChanged = true;
+    }
+  });
+
+  // Force broadcast every 10 ticks (1 second) to keep clients synced
+  // or immediately if someone moved.
+  const now = Date.now();
+  if (stateChanged || !global.lastBroadcastTime || now - global.lastBroadcastTime > 1000) {
+    const playerState = Array.from(players.values()).map(p => ({
+      id: p.id,
+      name: p.name,
+      color: p.color,
+      avatarType: p.avatarType,
+      direction: p.direction,
+      x: p.x,
+      y: p.y,
+      zone: p.zone,
+    }));
+    
+    broadcast({ type: 'state', players: playerState });
+    global.lastBroadcastTime = now;
+  }
 }, TICK_RATE);
 
 // WebSocket connection handler
 wss.on('connection', (ws) => {
   let playerId = null;
   let heartbeatTimeout = null;
-  let messageCount = 0;
+  let tokens = 100; // Token bucket for rate limiting
   let lastMessageTime = Date.now();
   
   // Check player limit
@@ -165,51 +199,80 @@ wss.on('connection', (ws) => {
   const resetHeartbeat = () => {
     clearTimeout(heartbeatTimeout);
     heartbeatTimeout = setTimeout(() => {
-      console.log(`[GAME] Player ${playerId} timed out`);
+      console.log(`[GAME] Player ${playerId} timed out due to inactivity`);
       if (playerId && players.has(playerId)) {
         players.delete(playerId);
         broadcast({ type: 'player_left', playerId });
       }
       ws.terminate();
-    }, 30000);
+    }, 300000); // 5 minutes timeout to prevent background tab kicks
   };
   
   ws.on('message', (data) => {
     try {
       const msg = JSON.parse(data);
       
-      if (playerId && playerId !== msg.myId) return;
-      
-      // Rate limiting: max 30 msgs/sec
+      // Rate limiting: 100 msgs/min por conexión
       const now = Date.now();
-      if (now - lastMessageTime < 33) {
-        messageCount++;
-        if (messageCount > 30) {
-          console.log(`[GAME] Rate limit exceeded for ${playerId}`);
-          return;
-        }
-      } else {
-        messageCount = 0;
-        lastMessageTime = now;
+      const elapsed = now - lastMessageTime;
+      tokens = Math.min(100, tokens + (elapsed / 60000) * 100);
+      lastMessageTime = now;
+      
+      if (tokens < 1) {
+        console.log(`[GAME] Rate limit exceeded for ${playerId || 'unknown'}`);
+        return; // Ignore message
       }
+      tokens--;
       
       switch (msg.type) {
         case 'join': {
-          playerId = uuidv4();
-          const name = msg.name || 'Anonymous';
-          const color = msg.color || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-          const x = 9; // Start in STUDIO area
-          const y = 16;
+          playerId = msg.sessionId || uuidv4();
           
-          const player = {
-            id: playerId,
-            name,
-            color,
-            x,
-            y,
-            zone: getZone(x, y),
-            inputQueue: [],
-          };
+          // Input Validation & XSS Protection
+          let name = msg.name || 'Anonymous';
+          name = name.replace(/[<>]/g, '').trim().substring(0, 20) || 'Anonymous';
+          
+          let color = msg.color || '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+          if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+            color = '#ffffff'; // Fallback
+          }
+          
+          const avatarType = parseInt(msg.avatarType) || 0;
+          
+          let player;
+          if (msg.sessionId && sessionStore.has(msg.sessionId)) {
+            // Clear eviction timer if reconnecting
+            if (sessionTimers.has(msg.sessionId)) {
+              clearTimeout(sessionTimers.get(msg.sessionId));
+              sessionTimers.delete(msg.sessionId);
+            }
+            
+            // Restore previous session
+            const saved = sessionStore.get(msg.sessionId);
+            player = {
+              ...saved,
+              name, // update name/color if they changed in UI
+              color,
+              avatarType,
+              currentKeys: []
+            };
+          } else {
+            // Start in STUDIO area with slight random offset to prevent perfect overlap
+            const x = 9 + Math.floor(Math.random() * 5) - 2; // 7 to 11
+            const y = 16 + Math.floor(Math.random() * 5) - 2; // 14 to 18
+            
+            player = {
+              id: playerId,
+              name,
+              color,
+              avatarType,
+              direction: 'S',
+              x,
+              y,
+              zone: getZone(x, y),
+              currentKeys: [],
+            };
+          }
           
           players.set(playerId, player);
           ws.playerId = playerId;
@@ -219,6 +282,8 @@ wss.on('connection', (ws) => {
             id: p.id,
             name: p.name,
             color: p.color,
+            avatarType: p.avatarType,
+            direction: p.direction,
             x: p.x,
             y: p.y,
             zone: p.zone,
@@ -233,8 +298,9 @@ wss.on('connection', (ws) => {
           }));
           
           // Broadcast new player
-          broadcast({ type: 'player_joined', player: { id: playerId, name, color, x, y, zone: player.zone } }, playerId);
+          broadcast({ type: 'player_joined', player: { id: playerId, name, color, avatarType: player.avatarType, direction: player.direction, x, y, zone: player.zone } }, playerId);
           
+          resetHeartbeat();
           console.log(`[GAME] Player ${name} (${playerId}) joined`);
           break;
         }
@@ -242,9 +308,7 @@ wss.on('connection', (ws) => {
         case 'input': {
           if (!playerId || !players.has(playerId)) return;
           const player = players.get(playerId);
-          if (player.inputQueue.length < 10) {
-            player.inputQueue.push({ keys: msg.keys });
-          }
+          player.currentKeys = msg.keys;
           resetHeartbeat();
           break;
         }
@@ -252,14 +316,17 @@ wss.on('connection', (ws) => {
         case 'chat': {
           if (!playerId || !players.has(playerId)) return;
           const player = players.get(playerId);
-          const message = msg.message.substring(0, 200); // Limit message length
           
-          // Proximity chat (4 tiles)
+          // XSS Protection & Length limit
+          let message = msg.message || '';
+          message = message.replace(/[<>]/g, '').trim().substring(0, 200);
+          if (!message) return;
+          
+          // Proximity chat (30 tiles - visible to anyone reasonably close)
           const proximityTargets = [];
           players.forEach((other, id) => {
-            if (id === playerId) return;
             const dist = Math.sqrt(Math.pow(player.x - other.x, 2) + Math.pow(player.y - other.y, 2));
-            if (dist <= 4) {
+            if (dist <= 30) {
               proximityTargets.push(id);
               const otherWs = Array.from(wss.clients).find(c => c.playerId === id);
               if (otherWs && otherWs.readyState === 1) {
@@ -310,9 +377,30 @@ wss.on('connection', (ws) => {
     if (playerId && players.has(playerId)) {
       const player = players.get(playerId);
       console.log(`[GAME] Player ${player.name} disconnected`);
+      sessionStore.set(playerId, { ...player, currentKeys: [] });
       players.delete(playerId);
       broadcast({ type: 'player_left', playerId });
+      
+      // Evict from memory after 15 minutes to prevent leak
+      const timer = setTimeout(() => {
+        sessionStore.delete(playerId);
+        sessionTimers.delete(playerId);
+        console.log(`[GAME] Session ${playerId} evicted from memory.`);
+      }, 15 * 60 * 1000);
+      sessionTimers.set(playerId, timer);
     }
+  });
+});
+
+// Health and stats endpoints
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() });
+});
+
+app.get('/stats', (req, res) => {
+  res.json({
+    players: players.size,
+    uptime: process.uptime(),
   });
 });
 

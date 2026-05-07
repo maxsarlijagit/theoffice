@@ -1,49 +1,46 @@
-﻿# The Office - Multiplayer Game
+# 🏢 The Office - Multiplayer Isometric Game
 
-A real-time multiplayer office simulation with proximity chat, zone-based voice, and cyberpunk aesthetics.
+Una simulación de oficina multijugador en tiempo real con perspectiva isométrica 32x32, chat de proximidad y arquitectura escalable.
 
-## Stack
-- Backend: Node.js + Express + WebSocket (ws)
-- Frontend: Vanilla Canvas 2D
-- Renderer: Procedural pixel art sprites
+## 🚀 Tecnologías
+- **Motor:** Phaser 3 (Rendering Isométrico + Z-Sorting)
+- **Frontend:** Vite + TypeScript
+- **Backend:** Node.js + Express + WebSocket (ws)
+- **Seguridad:** Parches contra XSS y gestión de sesiones por TTL.
 
-## Setup
+## 🛠️ Setup del Proyecto
 
+### Requisitos
+- Node.js (v18+)
+- npm
+
+### Instalación
 ```bash
 npm install
+```
+
+### Ejecución (Modo Desarrollo)
+Levanta tanto el servidor como el cliente Phaser en paralelo:
+```bash
 npm run dev
 ```
+- **Servidor:** http://localhost:5173 (Proxy via Vite)
+- **Cliente:** http://localhost:5173
 
-Open http://localhost:3000 in browser.
+## 🏗️ Herramientas de Equipo
 
-## Controls
-- WASD or Arrow keys: Move
-- Chat: Type message + Enter
-
-## Environment Variables
-
+### Editor de Layout Isométrico
+Para diseñar la oficina y exportar los datos de colisiones/terreno:
 ```bash
-# Discord Bot (optional)
-DISCORD_BOT_TOKEN=
-DISCORD_VOICE_OFFICE=
-DISCORD_VOICE_FOCUS_ROOM=
-DISCORD_VOICE_CAFETERIA=
-DISCORD_VOICE_ARCADE=
-DISCORD_VOICE_STUDIO=
+npm run editor
 ```
 
-## Deploy to Railway
+## 📁 Estructura del Proyecto
+- `/src`: Lógica del cliente Phaser 3.
+- `/server`: Lógica del servidor Node.js y WebSockets.
+- `/public/assets`: Sprites, Tilesets y datos de mapas (JSON).
+- `/iso-layout-editor`: Herramienta personalizada de diseño de niveles.
+- `/docs`: Documentación técnica y bitácoras de gestión.
 
-```bash
-railway init
-railway up
-```
-
-Set PORT env var in Railway.
-
-## Features
-- 5 zones: OFFICE, FOCUS ROOM, CAFETERIA, ARCADE, STUDIO
-- Proximity chat (4 tile radius)
-- Global chat panel
-- Avatar animation
-- Minimap with player dots
+---
+*Desarrollado para el TechArt Curso - Pivot Isométrico 2026.*

@@ -1,0 +1,65 @@
+{
+  "grid": {
+    "width": 20,
+    "height": 20,
+    "cellSize": 32
+  },
+  "areaStyles": {
+    "Main Hall": {
+      "color": "#60a5fa"
+    },
+    "Meeting Room": {
+      "color": "#f87171"
+    }
+  },
+  "tiles": [
+    { "x": 5, "y": 5, "type": "floor", "area": "Main Hall" },
+    { "x": 6, "y": 5, "type": "floor", "area": "Main Hall" },
+    { "x": 7, "y": 5, "type": "floor", "area": "Main Hall" },
+    { "x": 5, "y": 6, "type": "floor", "area": "Main Hall" },
+    { "x": 6, "y": 6, "type": "floor", "area": "Main Hall" },
+    { "x": 7, "y": 6, "type": "floor", "area": "Main Hall" },
+    { "x": 8, "y": 5, "type": "floor", "area": "Meeting Room" },
+    { "x": 9, "y": 5, "type": "floor", "area": "Meeting Room" },
+    { "x": 8, "y": 6, "type": "floor", "area": "Meeting Room" },
+    { "x": 9, "y": 6, "type": "floor", "area": "Meeting Room" }
+  ],
+  "areas": [
+    {
+      "id": "Main Hall-1",
+      "name": "Main Hall",
+      "cells": [
+        { "x": 5, "y": 5 }, { "x": 6, "y": 5 }, { "x": 7, "y": 5 },
+        { "x": 5, "y": 6 }, { "x": 6, "y": 6 }, { "x": 7, "y": 6 }
+      ],
+      "bounds": { "x": 5, "y": 5, "width": 3, "height": 2 }
+    },
+    {
+      "id": "Meeting Room-1",
+      "name": "Meeting Room",
+      "cells": [
+        { "x": 8, "y": 5 }, { "x": 9, "y": 5 },
+        { "x": 8, "y": 6 }, { "x": 9, "y": 6 }
+      ],
+      "bounds": { "x": 8, "y": 5, "width": 2, "height": 2 }
+    }
+  ],
+  "walls": [
+    { "x": 5, "y": 5, "edge": "top" },
+    { "x": 6, "y": 5, "edge": "top" },
+    { "x": 7, "y": 5, "edge": "top" },
+    { "x": 8, "y": 5, "edge": "top" },
+    { "x": 9, "y": 5, "edge": "top" },
+    { "x": 9, "y": 5, "edge": "right" },
+    { "x": 9, "y": 6, "edge": "right" },
+    { "x": 9, "y": 6, "edge": "bottom" },
+    { "x": 8, "y": 6, "edge": "bottom" },
+    { "x": 7, "y": 6, "edge": "bottom" },
+    { "x": 6, "y": 6, "edge": "bottom" },
+    { "x": 5, "y": 6, "edge": "bottom" },
+    { "x": 5, "y": 6, "edge": "left" },
+    { "x": 5, "y": 5, "edge": "left" },
+    { "x": 7, "y": 5, "edge": "right" },
+    { "x": 7, "y": 6, "edge": "right" }
+  ]
+}
