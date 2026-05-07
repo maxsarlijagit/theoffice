@@ -43,4 +43,4 @@ npm run editor
 - `/docs`: Documentación técnica y bitácoras de gestión.
 
 ---
-*Desarrollado para el TechArt Curso - Pivot Isométrico 2026.*
+*Desarrollado por alumnos - TechArt Academy - Max Sarlija 2026.*
