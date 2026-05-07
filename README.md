@@ -3,7 +3,7 @@
 Una simulación de oficina multijugador en tiempo real con perspectiva isométrica 32x32, chat de proximidad y arquitectura escalable.
 
 ## 🚀 Tecnologías
-- **Motor:** Phaser 3 (Rendering Isométrico + Z-Sorting)
+- **Motor:** Phaser 4.1.0 (Rendering Isométrico + Z-Sorting por Capas)
 - **Frontend:** Vite + TypeScript
 - **Backend:** Node.js + Express + WebSocket (ws)
 - **Seguridad:** Parches contra XSS y gestión de sesiones por TTL.
@@ -36,7 +36,7 @@ npm run editor
 ```
 
 ## 📁 Estructura del Proyecto
-- `/src`: Lógica del cliente Phaser 3.
+- `/src`: Lógica del cliente Phaser 4.
 - `/server`: Lógica del servidor Node.js y WebSockets.
 - `/public/assets`: Sprites, Tilesets y datos de mapas (JSON).
 - `/iso-layout-editor`: Herramienta personalizada de diseño de niveles.
