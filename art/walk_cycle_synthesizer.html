@@ -267,97 +267,131 @@
             const sin = Math.sin(rad);
             const cos = Math.cos(rad);
             
+            const yScale = 0.5;
             const cx = x + 16;
             const cy = y + 31; // Anchor point
 
-            // Animation logic (4 frames)
-            let legLOffset = 0, legROffset = 0;
-            let armLOffset = 0, armROffset = 0;
+            // Refined Animation cycle
+            let legLSw = 0, legRSw = 0; // Swing
+            let armLSw = 0, armRSw = 0;
             let bounce = 0;
             let headTilt = 0;
 
-            if (frame === 0) { // Contact 1
-                legLOffset = 4; legROffset = -3;
-                armLOffset = -3; armROffset = 3;
-                headTilt = 1;
-            } else if (frame === 1) { // Passing 1
-                legLOffset = 0; legROffset = 0;
-                armLOffset = 0; armROffset = 0;
-                bounce = -1;
-            } else if (frame === 2) { // Contact 2
-                legLOffset = -3; legROffset = 4;
-                armLOffset = 3; armROffset = -3;
-                headTilt = -1;
-            } else if (frame === 3) { // Passing 2
-                legLOffset = 0; legROffset = 0;
-                armLOffset = 0; armROffset = 0;
-                bounce = -1;
+            // Frame 0: Contact L (Low-ish)
+            // Frame 1: Passing L (High)
+            // Frame 2: Contact R (Low-ish)
+            // Frame 3: Passing R (High)
+            const swingMax = 5;
+            if (frame === 0) {
+                legLSw = swingMax; legRSw = -swingMax;
+                armLSw = -swingMax * 0.8; armRSw = swingMax * 0.8;
+                bounce = 0; headTilt = 0.5;
+            } else if (frame === 1) {
+                legLSw = 0; legRSw = 0;
+                armLSw = 0; armRSw = 0;
+                bounce = -2; headTilt = 0;
+            } else if (frame === 2) {
+                legLSw = -swingMax; legRSw = swingMax;
+                armLSw = swingMax * 0.8; armRSw = -swingMax * 0.8;
+                bounce = 0; headTilt = -0.5;
+            } else if (frame === 3) {
+                legLSw = 0; legRSw = 0;
+                armLSw = 0; armRSw = 0;
+                bounce = -2; headTilt = 0;
             }
 
             // Shadow
             ctx.fillStyle = 'rgba(0,0,0,0.15)';
             ctx.beginPath();
-            ctx.ellipse(cx, cy - 1, 7, 2.5, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx, cy - 1, 7, 7 * yScale, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Z-Sorting (Simple)
-            const isFacingNorth = angleDeg > 110 && angleDeg < 250;
-            const isFacingWest = angleDeg > 180 && angleDeg < 360;
+            // Foreshortening factor
+            const widthFactor = 0.85 + 0.15 * Math.abs(sin);
 
-            function drawPart(type, offsetX, offsetY, w, h, color, hasOutline = true) {
+            function drawPart(type, lx, ly, lz, w, h, color, hasOutline = true) {
+                // lx, ly: local coordinates (relative to character center)
+                // lz: height above ground
+                
+                // Rotate to screen space
+                const screenXOffset = lx * cos + ly * sin;
+                const depth = -lx * sin + ly * cos;
+                
+                let finalW = w;
+                if (type === 'arm' || type === 'leg') {
+                    // Foreshortening: thinner when moving along depth axis
+                    const depthMovement = Math.abs(ly * cos);
+                    if (depthMovement > 2) finalW = Math.max(1, Math.round(w * 0.8));
+                }
+
+                const screenX = Math.round(cx + screenXOffset - finalW / 2);
+                const screenY = Math.round(cy - h - lz + (depth * yScale));
+
                 ctx.fillStyle = color;
-                ctx.fillRect(cx + offsetX - w/2, cy - h - offsetY, w, h);
+                ctx.fillRect(screenX, screenY, finalW, h);
+
                 if (hasOutline) {
                     ctx.fillStyle = palette.outline;
-                    // Selective outline (bottom and away-from-light side)
-                    ctx.fillRect(cx + offsetX - w/2, cy - offsetY - 1, w, 1); // Bottom
-                    ctx.fillRect(cx + offsetX + w/2 - 1, cy - h - offsetY, 1, h); // Right
+                    ctx.fillRect(screenX, screenY + h - 1, finalW, 1);
+                    ctx.fillRect(screenX + finalW - 1, screenY, 1, h);
                 }
             }
 
-            // Draw Legs
-            if (isFacingNorth) {
-                drawPart('leg', legLOffset - 2, 0, 3, 10, palette.skin);
-                drawPart('leg', legROffset + 2, 0, 3, 10, palette.shadow);
-            } else {
-                drawPart('leg', legROffset + 2, 0, 3, 10, palette.shadow);
-                drawPart('leg', legLOffset - 2, 0, 3, 10, palette.skin);
-            }
-
-            // Torso
+            // Z-Sorting logic
+            const isFacingNorth = angleDeg > 110 && angleDeg < 250;
             const torsoH = 10;
             const torsoW = 9;
-            const ty = 10 - bounce; // Height above ground
+            const ty = 10 - bounce; // Torso base height
             const lightDot = Math.cos(rad - (135 * Math.PI / 180));
 
-            drawPart('torso', 0, ty, torsoW, torsoH, lightDot > 0 ? palette.skin : palette.shadow);
+            const limbs = [
+                { type: 'leg', lx: -2, ly: legLSw, lz: 0, w: 3, h: 10, color: palette.skin, side: 'front' },
+                { type: 'leg', lx: 2, ly: legRSw, lz: 0, w: 3, h: 10, color: palette.shadow, side: 'back' },
+                { type: 'arm', lx: -5, ly: armLSw, lz: ty + 1, w: 2, h: 8, color: palette.skin, side: 'front' },
+                { type: 'arm', lx: 5, ly: armRSw, lz: ty + 1, w: 2, h: 8, color: palette.shadow, side: 'back' }
+            ];
+
+            // Sort by depth relative to camera
+            // If facing North, "front" parts of character are further away
+            // In our coordinate system, depth is calculated in drawPart.
+            // Let's draw in order: furthest to closest.
             
-            // Torso Highlight
-            if (lightDot > 0) {
-                ctx.fillStyle = palette.highlight;
-                ctx.fillRect(cx - torsoW/2, cy - torsoH - ty, 2, torsoH);
-                ctx.fillRect(cx - torsoW/2, cy - torsoH - ty, torsoW, 2);
+            function getPartDepth(p) {
+                return -p.lx * sin + p.ly * cos;
             }
 
-            // Arms
-            if (isFacingNorth) {
-                drawPart('arm', armROffset + 5, ty + 1, 2, 8, palette.shadow);
-                drawPart('arm', armLOffset - 5, ty + 1, 2, 8, palette.skin);
-            } else {
-                drawPart('arm', armLOffset - 5, ty + 1, 2, 8, palette.skin);
-                drawPart('arm', armROffset + 5, ty + 1, 2, 8, palette.shadow);
+            const sortedLimbs = limbs.sort((a, b) => getPartDepth(a) - getPartDepth(b));
+
+            // Render furthest limbs
+            sortedLimbs.filter(p => getPartDepth(p) < 0).forEach(p => {
+                drawPart(p.type, p.lx, p.ly, p.lz, p.w, p.h, p.color);
+            });
+
+            // Torso
+            drawPart('torso', 0, 0, ty, torsoW, torsoH, lightDot > 0 ? palette.skin : palette.shadow);
+            if (lightDot > 0) {
+                ctx.fillStyle = palette.highlight;
+                const tx = Math.round(cx - torsoW/2);
+                const ty_screen = Math.round(cy - torsoH - ty);
+                ctx.fillRect(tx, ty_screen, 2, torsoH);
+                ctx.fillRect(tx, ty_screen, torsoW, 2);
             }
+
+            // Render closest limbs
+            sortedLimbs.filter(p => getPartDepth(p) >= 0).forEach(p => {
+                drawPart(p.type, p.lx, p.ly, p.lz, p.w, p.h, p.color);
+            });
 
             // Head
             const headW = 8, headH = 9;
             const hy = ty + torsoH;
-            drawPart('head', headTilt, hy, headW, headH, lightDot > 0.5 ? palette.highlight : (lightDot > -0.5 ? palette.skin : palette.shadow));
+            drawPart('head', headTilt, 0, hy, headW, headH, lightDot > 0.5 ? palette.highlight : (lightDot > -0.5 ? palette.skin : palette.shadow));
 
-            // Eyes (If facing south)
+            // Eyes
             if (!isFacingNorth) {
                 ctx.fillStyle = palette.dark;
-                const eyeX = cx + (Math.sin(rad) * 2) + headTilt;
-                const eyeY = cy - hy - headH + 5;
+                const eyeX = Math.round(cx + (sin * 2) + headTilt);
+                const eyeY = Math.round(cy - hy - headH + 5);
                 ctx.fillRect(eyeX - 2, eyeY, 1, 1);
                 ctx.fillRect(eyeX + 1, eyeY, 1, 1);
             }
