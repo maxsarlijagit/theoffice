@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Avatar Zero - Modular Previewer</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .canvas-container {
+            position: relative;
+            width: 128px;
+            height: 128px;
+            background: #0d1117;
+            border: 2px solid #30363d;
+            margin: 20px auto;
+            image-rendering: pixelated;
+        }
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background: #238636;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button.inactive {
+            background: #da3633;
+        }
+        h1 { margin-bottom: 0.5rem; color: #58a6ff; }
+        p { color: #8b949e; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Avatar Zero Previewer</h1>
+        <p>Prueba la modularidad del personaje base</p>
+        
+        <div class="canvas-container">
+            <img id="layer-legs" class="layer" src="modular/legs.png" alt="Legs">
+            <img id="layer-torso" class="layer" src="modular/torso.png" alt="Torso">
+            <img id="layer-head" class="layer" src="modular/head.png" alt="Head">
+        </div>
+
+        <div class="controls">
+            <button onclick="toggleLayer('head')">Toggle Cabeza</button>
+            <button onclick="toggleLayer('torso')">Toggle Torso</button>
+            <button onclick="toggleLayer('legs')">Toggle Piernas</button>
+            <button onclick="reset()">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleLayer(id) {
+            const el = document.getElementById('layer-' + id);
+            const btn = event.target;
+            if (el.style.display === 'none') {
+                el.style.display = 'block';
+                btn.classList.remove('inactive');
+            } else {
+                el.style.display = 'none';
+                btn.classList.add('inactive');
+            }
+        }
+        function reset() {
+            ['head', 'torso', 'legs'].forEach(id => {
+                document.getElementById('layer-' + id).style.display = 'block';
+            });
+            document.querySelectorAll('button').forEach(btn => btn.classList.remove('inactive'));
+        }
+    </script>
+</body>
+</html>
