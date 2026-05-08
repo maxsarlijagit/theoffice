@@ -6,9 +6,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "vite --host 0.0.0.0",
-    "dev": "vite --host 0.0.0.0",
+    "start": "node server/index.js",
     "server": "node --watch server/index.js",
+    "client": "vite --host 0.0.0.0",
+    "editor": "npm run dev --prefix iso-layout-editor",
+    "dev": "npm run server & npm run client",
     "build": "vite build"
   },
   "dependencies": {
