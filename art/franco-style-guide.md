@@ -258,7 +258,13 @@ Talones
 
 🔄 Consistencia
 
-Mantener volumen idéntico entre vistas
+Mantener volumen idéntico entre vistas.
+
+🧭 Orientación (8 Direcciones)
+
+Para el sistema de caminata, se requieren 8 orientaciones siguiendo el estándar de 3/4 isométrico.
+
+Ver guía detallada: [directional-guide.md](file:///e:/Formación%20Technical%20Artist/Repo%20Github/theoffice/art/directional-guide.md)
 
 🚶 Animación
 Walk cycle (4–6 frames)
