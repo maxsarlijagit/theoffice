@@ -6,9 +6,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "node --watch server/index.js",
-    "build": "echo 'No build step for vanilla JS'"
+    "start": "vite --host 0.0.0.0",
+    "dev": "vite --host 0.0.0.0",
+    "server": "node --watch server/index.js",
+    "build": "vite build"
   },
   "dependencies": {
     "discord.js": "^14.26.3",

@@ -28,11 +28,26 @@ const DEFAULT_MAX_ROOM_SIZE = 8
 const WALL_EDGES = ['top', 'right', 'bottom', 'left'] as const
 const DEFAULT_AREA_NAME = 'Floor'
 const DEFAULT_AREA_COLOR = '#60a5fa'
+const DEFAULT_WALL_HEIGHT = 54
+const DEFAULT_OBJECT_HEIGHT = 40
+const AREA_FOLDERS = [
+  'openoffice',
+  'yard',
+  'arcade',
+  'coffee',
+  'focus',
+  'spawn',
+  'study',
+] as const
 
 type WallEdge = (typeof WALL_EDGES)[number]
 type ToolMode = 'wall' | 'floor' | 'fill'
 type PaintOperation = 'add' | 'subtract'
 type CanvasTheme = 'light' | 'dark'
+type EditorTab = 'layout' | 'customize'
+type CustomizeMode = 'floor' | 'object' | 'wall'
+type AreaFolder = (typeof AREA_FOLDERS)[number]
+type CatalogAssetKind = 'floor' | 'object'
 
 type Tile = {
   x: number
@@ -40,12 +55,28 @@ type Tile = {
   type: 'floor'
   area: string
   color: string
+  floorSprite?: string
 }
 
 type Wall = {
   x: number
   y: number
   edge: WallEdge
+  height?: number
+}
+
+type MapObject = {
+  id: string
+  x: number
+  y: number
+  width: number
+  depth: number
+  type: 'object'
+  area: string
+  name: string
+  sprite: string
+  collider: boolean
+  height: number
 }
 
 type GridConfig = {
@@ -68,6 +99,7 @@ type ViewState = {
 type HistoryEntry = {
   tiles: Tile[]
   walls: Wall[]
+  objects: MapObject[]
 }
 
 type ExportedAreaStyle = {
@@ -96,6 +128,68 @@ type GeneratedRoom = {
   width: number
   height: number
 }
+
+type CatalogAsset = {
+  id: string
+  zone: AreaFolder
+  kind: CatalogAssetKind
+  name: string
+  sprite: string
+  collider: boolean
+  width: number
+  depth: number
+  height: number
+}
+
+const ASSET_CATALOG: CatalogAsset[] = AREA_FOLDERS.flatMap((zone) => [
+  {
+    id: `${zone}-floor`,
+    zone,
+    kind: 'floor',
+    name: 'Floor',
+    sprite: `/art/${zone}/floor.png`,
+    collider: false,
+    width: 1,
+    depth: 1,
+    height: 0,
+  },
+  {
+    id: `${zone}-desk`,
+    zone,
+    kind: 'object',
+    name: 'Desk',
+    sprite: `/art/${zone}/objects/desk.png`,
+    collider: true,
+    width: 2,
+    depth: 1,
+    height: DEFAULT_OBJECT_HEIGHT,
+  },
+  {
+    id: `${zone}-chair`,
+    zone,
+    kind: 'object',
+    name: 'Chair',
+    sprite: `/art/${zone}/objects/chair.png`,
+    collider: true,
+    width: 1,
+    depth: 1,
+    height: 28,
+  },
+  {
+    id: `${zone}-plant`,
+    zone,
+    kind: 'object',
+    name: 'Plant',
+    sprite: `/art/${zone}/objects/plant.png`,
+    collider: true,
+    width: 1,
+    depth: 1,
+    height: 46,
+  },
+])
+
+const DEFAULT_SELECTED_OBJECT_ID =
+  ASSET_CATALOG.find((asset) => asset.kind === 'object')?.id ?? ASSET_CATALOG[0]?.id ?? ''
 
 const DIRECTIONS: Array<{
   dx: number
@@ -149,11 +243,11 @@ function getWallNeighbor(x: number, y: number, edge: WallEdge): Point {
 
 function getCanonicalWall(wall: Wall, grid: GridConfig): Wall {
   if (wall.edge === 'bottom' && wall.y + 1 < grid.height) {
-    return { x: wall.x, y: wall.y + 1, edge: 'top' }
+    return { ...wall, y: wall.y + 1, edge: 'top' }
   }
 
   if (wall.edge === 'right' && wall.x + 1 < grid.width) {
-    return { x: wall.x + 1, y: wall.y, edge: 'left' }
+    return { ...wall, x: wall.x + 1, edge: 'left' }
   }
 
   return wall
@@ -626,6 +720,26 @@ function traceTilePath(
   context.closePath()
 }
 
+function fillPolygon(
+  context: CanvasRenderingContext2D,
+  points: Point[],
+  fillStyle: string,
+  strokeStyle: string,
+) {
+  context.beginPath()
+  context.moveTo(points[0].x, points[0].y)
+
+  for (const point of points.slice(1)) {
+    context.lineTo(point.x, point.y)
+  }
+
+  context.closePath()
+  context.fillStyle = fillStyle
+  context.fill()
+  context.strokeStyle = strokeStyle
+  context.stroke()
+}
+
 function getCanvasPointFromMouseEvent(event: MouseEvent<HTMLCanvasElement>): Point {
   const rect = event.currentTarget.getBoundingClientRect()
 
@@ -701,6 +815,28 @@ function getWallTargetFromWorldPoint(point: Point, grid: GridConfig): Wall | nul
   return { x: cell.x, y: cell.y, edge: nearestEdge.edge }
 }
 
+function getWallRenderSegment(wall: Wall, grid: GridConfig) {
+  const { tileWidth, tileHeight } = getIsoMetrics(grid)
+  const top = getTileTopPoint(wall.x, wall.y, grid)
+  const right = { x: top.x + tileWidth / 2, y: top.y + tileHeight / 2 }
+  const bottom = { x: top.x, y: top.y + tileHeight }
+  const left = { x: top.x - tileWidth / 2, y: top.y + tileHeight / 2 }
+  const points: Record<WallEdge, [Point, Point]> = {
+    top: [top, right],
+    right: [right, bottom],
+    bottom: [bottom, left],
+    left: [left, top],
+  }
+  const [start, end] = points[wall.edge]
+
+  return {
+    wall,
+    start,
+    end,
+    depth: Math.max(start.y, end.y),
+  }
+}
+
 function getFitView(grid: GridConfig, viewport: Point): ViewState {
   const bounds = getIsoMetrics(grid)
   const availableWidth = Math.max(1, viewport.x - FIT_PADDING * 2)
@@ -729,13 +865,22 @@ function App() {
   const lastPaintedCellRef = useRef<Point | null>(null)
   const lastPaintedWallRef = useRef<Wall | null>(null)
   const lastPanPointRef = useRef<Point | null>(null)
+  const imageCacheRef = useRef(new Map<string, HTMLImageElement>())
   const tilesRef = useRef<Tile[]>([])
   const wallsRef = useRef<Wall[]>([])
+  const objectsRef = useRef<MapObject[]>([])
   const historyRef = useRef<HistoryEntry[]>([])
   const [tiles, setTiles] = useState<Tile[]>([])
   const [walls, setWalls] = useState<Wall[]>([])
+  const [objects, setObjects] = useState<MapObject[]>([])
   const [toolMode, setToolMode] = useState<ToolMode>('floor')
   const [paintOperation, setPaintOperation] = useState<PaintOperation>('add')
+  const [editorTab, setEditorTab] = useState<EditorTab>('layout')
+  const [customizeMode, setCustomizeMode] = useState<CustomizeMode>('object')
+  const [catalogAssets, setCatalogAssets] = useState<CatalogAsset[]>(ASSET_CATALOG)
+  const [selectedAssetId, setSelectedAssetId] = useState(DEFAULT_SELECTED_OBJECT_ID)
+  const [imageRevision, setImageRevision] = useState(0)
+  const [wallHeight, setWallHeight] = useState(DEFAULT_WALL_HEIGHT)
   const [areaName, setAreaName] = useState(DEFAULT_AREA_NAME)
   const [areaColor, setAreaColor] = useState(DEFAULT_AREA_COLOR)
   const [canvasTheme, setCanvasTheme] = useState<CanvasTheme>('light')
@@ -784,6 +929,36 @@ function App() {
 
     return [...groups.values()].sort((a, b) => a.area.localeCompare(b.area))
   }, [tiles])
+  const selectedAsset = useMemo(
+    () =>
+      catalogAssets.find((asset) => asset.id === selectedAssetId) ??
+      catalogAssets.find((asset) => asset.kind === customizeMode) ??
+      catalogAssets[0],
+    [catalogAssets, customizeMode, selectedAssetId],
+  )
+  const catalogByZone = useMemo(
+    () =>
+      AREA_FOLDERS.map((zone) => ({
+        zone,
+        floors: catalogAssets.filter(
+          (asset) => asset.zone === zone && asset.kind === 'floor',
+        ),
+        objects: catalogAssets.filter(
+          (asset) => asset.zone === zone && asset.kind === 'object',
+        ),
+      })),
+    [catalogAssets],
+  )
+  const spritePaths = useMemo(
+    () => [
+      ...new Set([
+        ...catalogAssets.map((asset) => asset.sprite),
+        ...tiles.map((tile) => tile.floorSprite).filter(Boolean),
+        ...objects.map((object) => object.sprite),
+      ]),
+    ] as string[],
+    [catalogAssets, objects, tiles],
+  )
 
   const pushHistory = () => {
     historyRef.current = [
@@ -791,6 +966,7 @@ function App() {
       {
         tiles: tilesRef.current.map((tile) => ({ ...tile })),
         walls: wallsRef.current.map((wall) => ({ ...wall })),
+        objects: objectsRef.current.map((object) => ({ ...object })),
       },
     ]
   }
@@ -805,10 +981,21 @@ function App() {
     historyRef.current = historyRef.current.slice(0, -1)
     setTiles(previousEntry.tiles)
     setWalls(previousEntry.walls)
+    setObjects(previousEntry.objects)
   }
 
   const getActivePaintOperation = (): PaintOperation =>
     isAltPressedRef.current ? 'subtract' : paintOperation
+
+  const getLoadedImage = (sprite: string | undefined) => {
+    if (!sprite) {
+      return null
+    }
+
+    const image = imageCacheRef.current.get(sprite)
+
+    return image?.complete && image.naturalWidth > 0 ? image : null
+  }
 
   const paintTile = (x: number, y: number) => {
     setTiles((currentTiles) => {
@@ -833,19 +1020,15 @@ function App() {
 
   const applyWall = (wall: Wall) => {
     setWalls((currentWalls) => {
+      const canonicalWall = getCanonicalWall({ ...wall, height: wallHeight }, grid)
+      const wallKey = getCanonicalWallKey(canonicalWall, grid)
       const existingWall = currentWalls.some(
-        (currentWall) =>
-          currentWall.x === wall.x &&
-          currentWall.y === wall.y &&
-          currentWall.edge === wall.edge,
+        (currentWall) => getCanonicalWallKey(currentWall, grid) === wallKey,
       )
 
       if (getActivePaintOperation() === 'subtract') {
         return currentWalls.filter(
-          (currentWall) =>
-            currentWall.x !== wall.x ||
-            currentWall.y !== wall.y ||
-            currentWall.edge !== wall.edge,
+          (currentWall) => getCanonicalWallKey(currentWall, grid) !== wallKey,
         )
       }
 
@@ -853,8 +1036,62 @@ function App() {
         return currentWalls
       }
 
-      return [...currentWalls, wall]
+      return [...currentWalls, canonicalWall]
     })
+  }
+
+  const placeSelectedAsset = (cell: Point) => {
+    if (!selectedAsset) {
+      return
+    }
+
+    pushHistory()
+
+    if (selectedAsset.kind === 'floor') {
+      setTiles((currentTiles) => {
+        const nextTiles = new Map(
+          currentTiles.map((tile) => [getCellKey(tile.x, tile.y), tile]),
+        )
+        const existingTile = nextTiles.get(getCellKey(cell.x, cell.y))
+        const area = selectedAsset.zone === 'openoffice' ? 'Open_Office' : selectedAsset.zone[0].toUpperCase() + selectedAsset.zone.slice(1)
+
+        nextTiles.set(getCellKey(cell.x, cell.y), {
+          x: cell.x,
+          y: cell.y,
+          type: 'floor',
+          area: existingTile?.area ?? area,
+          color: existingTile?.color ?? areaColor,
+          floorSprite: selectedAsset.sprite,
+        })
+
+        return [...nextTiles.values()]
+      })
+      return
+    }
+
+    setObjects((currentObjects) => [
+      ...currentObjects.filter((object) => object.x !== cell.x || object.y !== cell.y),
+      {
+        id: `${selectedAsset.id}-${Date.now()}`,
+        x: cell.x,
+        y: cell.y,
+        width: selectedAsset.width,
+        depth: selectedAsset.depth,
+        type: 'object',
+        area: selectedAsset.zone,
+        name: selectedAsset.name,
+        sprite: selectedAsset.sprite,
+        collider: selectedAsset.collider,
+        height: selectedAsset.height,
+      },
+    ])
+  }
+
+  const removeObjectAtCell = (cell: Point) => {
+    pushHistory()
+    setObjects((currentObjects) =>
+      currentObjects.filter((object) => object.x !== cell.x || object.y !== cell.y),
+    )
   }
 
   const fillArea = (start: Point) => {
@@ -1066,6 +1303,11 @@ function App() {
             (wall) => wall.x < nextGrid.width && wall.y < nextGrid.height,
           ),
         )
+        setObjects((currentObjects) =>
+          currentObjects.filter(
+            (object) => object.x < nextGrid.width && object.y < nextGrid.height,
+          ),
+        )
       }
 
       return nextGrid
@@ -1093,6 +1335,7 @@ function App() {
     setGeneratorConfig(nextGeneratorConfig)
     setTiles([])
     setWalls([])
+    setObjects([])
     setTiles(generatedLayout.tiles)
     setWalls(generatedLayout.walls)
     setHiddenAreaKeys(new Set())
@@ -1108,28 +1351,38 @@ function App() {
       }),
       {},
     )
-    const exportedTiles = tiles.map(({ x, y, type, area }) => ({
+    const exportedTiles = tiles.map(({ x, y, type, area, floorSprite }) => ({
       x,
       y,
       type,
       area,
+      ...(floorSprite ? { floorSprite } : {}),
     }))
     const exportedWalls = [
       ...new Map(
         walls.map((wall) => {
           const canonicalWall = getCanonicalWall(wall, grid)
 
-          return [getCanonicalWallKey(canonicalWall, grid), canonicalWall]
+          return [
+            getCanonicalWallKey(canonicalWall, grid),
+            { ...canonicalWall, height: wall.height ?? wallHeight },
+          ]
         }),
       ).values(),
     ]
     const data = JSON.stringify(
       {
+        schemaVersion: 2,
         grid,
         areaStyles,
         tiles: exportedTiles,
         areas: getExportedAreas(tiles),
         walls: exportedWalls,
+        objects,
+        assetCatalog: {
+          root: '/art',
+          zones: [...AREA_FOLDERS],
+        },
       },
       null,
       2,
@@ -1139,7 +1392,7 @@ function App() {
     const link = document.createElement('a')
 
     link.href = url
-    link.download = 'grid.json'
+    link.download = 'map1.json'
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -1191,6 +1444,7 @@ function App() {
 
       const importedTiles = new Map<string, Tile>()
       const importedWalls = new Map<string, Wall>()
+      const importedObjects = new Map<string, MapObject>()
       const parsedAreaStyles = (parsedData as { areaStyles?: unknown }).areaStyles
       const areaStyles: Record<string, ExportedAreaStyle> = {}
 
@@ -1216,12 +1470,13 @@ function App() {
           throw new Error('Each tile must be an object.')
         }
 
-        const { x, y, type, area, color } = tile as {
+        const { x, y, type, area, color, floorSprite } = tile as {
           x?: unknown
           y?: unknown
           type?: unknown
           area?: unknown
           color?: unknown
+          floorSprite?: unknown
         }
 
         if (
@@ -1253,6 +1508,7 @@ function App() {
           color:
             areaStyles[importedArea]?.color ??
             (typeof color === 'string' ? color : DEFAULT_AREA_COLOR),
+          ...(typeof floorSprite === 'string' ? { floorSprite } : {}),
         })
       }
 
@@ -1268,10 +1524,11 @@ function App() {
             throw new Error('Each wall must be an object.')
           }
 
-          const { x, y, edge } = wall as {
+          const { x, y, edge, height } = wall as {
             x?: unknown
             y?: unknown
             edge?: unknown
+            height?: unknown
           }
 
           if (
@@ -1288,7 +1545,18 @@ function App() {
             throw new Error('Each wall must have valid x, y, and edge values.')
           }
 
-          const canonicalWall = getCanonicalWall({ x, y, edge }, nextGrid)
+          const canonicalWall = getCanonicalWall(
+            {
+              x,
+              y,
+              edge,
+              height:
+                typeof height === 'number'
+                  ? clamp(Math.round(height), 8, 240)
+                  : DEFAULT_WALL_HEIGHT,
+            },
+            nextGrid,
+          )
           importedWalls.set(
             getCanonicalWallKey(canonicalWall, nextGrid),
             canonicalWall,
@@ -1296,10 +1564,85 @@ function App() {
         }
       }
 
+      const parsedObjects = (parsedData as { objects?: unknown }).objects
+
+      if (parsedObjects !== undefined) {
+        if (!Array.isArray(parsedObjects)) {
+          throw new Error('Objects must be an array.')
+        }
+
+        for (const object of parsedObjects) {
+          if (typeof object !== 'object' || object === null) {
+            throw new Error('Each object must be an object.')
+          }
+
+          const {
+            id,
+            x,
+            y,
+            width,
+            depth,
+            type,
+            area,
+            name,
+            sprite,
+            collider,
+            height,
+          } = object as {
+            id?: unknown
+            x?: unknown
+            y?: unknown
+            width?: unknown
+            depth?: unknown
+            type?: unknown
+            area?: unknown
+            name?: unknown
+            sprite?: unknown
+            collider?: unknown
+            height?: unknown
+          }
+
+          if (
+            typeof x !== 'number' ||
+            typeof y !== 'number' ||
+            !Number.isInteger(x) ||
+            !Number.isInteger(y) ||
+            x < 0 ||
+            x >= nextGrid.width ||
+            y < 0 ||
+            y >= nextGrid.height ||
+            type !== 'object' ||
+            typeof sprite !== 'string'
+          ) {
+            throw new Error('Each object must have valid x, y, type, and sprite values.')
+          }
+
+          const objectId = typeof id === 'string' ? id : `object-${x}-${y}`
+
+          importedObjects.set(objectId, {
+            id: objectId,
+            x,
+            y,
+            width: typeof width === 'number' ? clamp(Math.round(width), 1, 20) : 1,
+            depth: typeof depth === 'number' ? clamp(Math.round(depth), 1, 20) : 1,
+            type: 'object',
+            area: typeof area === 'string' ? area : 'shared',
+            name: typeof name === 'string' ? name : 'Object',
+            sprite,
+            collider: typeof collider === 'boolean' ? collider : true,
+            height:
+              typeof height === 'number'
+                ? clamp(Math.round(height), 0, 240)
+                : DEFAULT_OBJECT_HEIGHT,
+          })
+        }
+      }
+
       pushHistory()
       setGrid(nextGrid)
       setTiles([...importedTiles.values()])
       setWalls([...importedWalls.values()])
+      setObjects([...importedObjects.values()])
       setHiddenAreaKeys(new Set())
       setAreaDrafts({})
     } catch (error) {
@@ -1325,6 +1668,42 @@ function App() {
     }
 
     const worldPoint = screenToWorld(screenPoint, view)
+
+    if (editorTab === 'customize') {
+      if (customizeMode === 'wall') {
+        const wall = getWallTargetFromWorldPoint(worldPoint, grid)
+        lastPaintedWallRef.current = wall
+
+        if (wall) {
+          pushHistory()
+          setWalls((currentWalls) => {
+            const canonicalWall = getCanonicalWall({ ...wall, height: wallHeight }, grid)
+            const key = getCanonicalWallKey(canonicalWall, grid)
+
+            return [
+              ...currentWalls.filter(
+                (currentWall) => getCanonicalWallKey(currentWall, grid) !== key,
+              ),
+              canonicalWall,
+            ]
+          })
+        }
+
+        return
+      }
+
+      const cell = getCellFromWorldPoint(worldPoint, grid)
+
+      if (cell) {
+        if (getActivePaintOperation() === 'subtract') {
+          removeObjectAtCell(cell)
+        } else {
+          placeSelectedAsset(cell)
+        }
+      }
+
+      return
+    }
 
     if (toolMode === 'fill') {
       const cell = getCellFromWorldPoint(worldPoint, grid)
@@ -1437,6 +1816,54 @@ function App() {
   }, [walls])
 
   useEffect(() => {
+    objectsRef.current = objects
+  }, [objects])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch('/__art-assets')
+      .then((response) => (response.ok ? response.json() : ASSET_CATALOG))
+      .then((assets: CatalogAsset[]) => {
+        if (cancelled || !Array.isArray(assets) || assets.length === 0) {
+          return
+        }
+
+        setCatalogAssets(assets)
+        setSelectedAssetId((currentAssetId) => {
+          if (assets.some((asset) => asset.id === currentAssetId)) {
+            return currentAssetId
+          }
+
+          return assets.find((asset) => asset.kind === customizeMode)?.id ?? assets[0].id
+        })
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogAssets(ASSET_CATALOG)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [customizeMode])
+
+  useEffect(() => {
+    for (const spritePath of spritePaths) {
+      if (!spritePath || imageCacheRef.current.has(spritePath)) {
+        continue
+      }
+
+      const image = new Image()
+      image.onload = () => setImageRevision((revision) => revision + 1)
+      image.onerror = () => setImageRevision((revision) => revision + 1)
+      image.src = spritePath
+      imageCacheRef.current.set(spritePath, image)
+    }
+  }, [spritePaths])
+
+  useEffect(() => {
     const viewport = viewportRef.current
 
     if (!viewport) {
@@ -1520,6 +1947,7 @@ function App() {
     const dpr = window.devicePixelRatio || 1
     canvas.width = Math.max(1, Math.floor(viewportSize.x * dpr))
     canvas.height = Math.max(1, Math.floor(viewportSize.y * dpr))
+    context.imageSmoothingEnabled = false
 
     context.setTransform(1, 0, 0, 1, 0, 0)
     context.fillStyle = canvasTheme === 'dark' ? '#05070a' : '#eef1f5'
@@ -1531,9 +1959,21 @@ function App() {
         continue
       }
 
-      context.fillStyle = tile.color || DEFAULT_AREA_COLOR
       traceTilePath(context, tile.x, tile.y, grid)
-      context.fill()
+      const floorImage = getLoadedImage(tile.floorSprite)
+
+      if (floorImage) {
+        context.save()
+        context.clip()
+        const { tileWidth, tileHeight } = getIsoMetrics(grid)
+        const top = getTileTopPoint(tile.x, tile.y, grid)
+
+        context.drawImage(floorImage, top.x - tileWidth / 2, top.y, tileWidth, tileHeight)
+        context.restore()
+      } else {
+        context.fillStyle = tile.color || DEFAULT_AREA_COLOR
+        context.fill()
+      }
     }
 
     context.strokeStyle = canvasTheme === 'dark' ? '#252b35' : '#d9d9d9'
@@ -1545,109 +1985,180 @@ function App() {
       }
     }
 
-    context.strokeStyle = canvasTheme === 'dark' ? '#f8fafc' : '#111827'
-    context.lineWidth = 3 / view.zoom
-    context.lineCap = 'round'
+    const { tileWidth, tileHeight } = getIsoMetrics(grid)
+    const sceneItems = [
+      ...walls.map((wall) => ({
+        type: 'wall' as const,
+        depth: getWallRenderSegment(wall, grid).depth,
+        order: 1,
+        wall,
+      })),
+      ...objects.map((object) => {
+        const footprintBack = getTileTopPoint(
+          object.x + object.width - 1,
+          object.y + object.depth - 1,
+          grid,
+        )
 
-    for (const wall of walls) {
-      const { tileWidth, tileHeight } = getIsoMetrics(grid)
-      const top = getTileTopPoint(wall.x, wall.y, grid)
-      const right = { x: top.x + tileWidth / 2, y: top.y + tileHeight / 2 }
-      const bottom = { x: top.x, y: top.y + tileHeight }
-      const left = { x: top.x - tileWidth / 2, y: top.y + tileHeight / 2 }
-      const points: Record<WallEdge, [Point, Point]> = {
-        top: [top, right],
-        right: [right, bottom],
-        bottom: [bottom, left],
-        left: [left, top],
+        return {
+          type: 'object' as const,
+          depth: footprintBack.y + tileHeight,
+          order: 0,
+          object,
+        }
+      }),
+    ].sort((a, b) => a.depth - b.depth || a.order - b.order)
+
+    for (const item of sceneItems) {
+      if (item.type === 'wall') {
+        const { wall, start, end } = getWallRenderSegment(item.wall, grid)
+        const scaledHeight = (wall.height ?? DEFAULT_WALL_HEIGHT) * (tileWidth / 64)
+        const topStart = { x: start.x, y: start.y - scaledHeight }
+        const topEnd = { x: end.x, y: end.y - scaledHeight }
+
+        context.lineWidth = 1 / view.zoom
+        fillPolygon(context, [start, end, topEnd, topStart], '#334155', '#0f172a')
+        continue
       }
-      const [start, end] = points[wall.edge]
 
-      context.beginPath()
-      context.moveTo(start.x, start.y)
-      context.lineTo(end.x, end.y)
-      context.stroke()
+      const { object } = item
+      const anchorTop = getTileTopPoint(
+        object.x + object.width / 2 - 0.5,
+        object.y + object.depth / 2 - 0.5,
+        grid,
+      )
+      const center = { x: anchorTop.x, y: anchorTop.y + tileHeight / 2 }
+      const width = Math.max(tileWidth * 0.42, object.width * tileWidth * 0.3)
+      const height = Math.max(18, object.height * 0.55)
+      const objectImage = getLoadedImage(object.sprite)
+
+      if (objectImage) {
+        const imageWidth = Math.max(tileWidth * object.width, width)
+        const imageHeight = imageWidth * (objectImage.naturalHeight / objectImage.naturalWidth)
+
+        context.drawImage(
+          objectImage,
+          center.x - imageWidth / 2,
+          center.y - imageHeight,
+          imageWidth,
+          imageHeight,
+        )
+        continue
+      }
+
+      context.fillStyle = object.collider ? '#ef4444' : '#22c55e'
+      context.strokeStyle = '#111827'
+      context.lineWidth = 1 / view.zoom
+      context.fillRect(center.x - width / 2, center.y - height, width, height)
+      context.strokeRect(center.x - width / 2, center.y - height, width, height)
+      context.fillStyle = '#f8fafc'
+      context.font = `${Math.max(9, 11 / view.zoom)}px system-ui, Segoe UI, sans-serif`
+      context.textAlign = 'center'
+      context.fillText(object.name, center.x, center.y - height - 4)
     }
-  }, [canvasTheme, grid, hiddenAreaKeys, tiles, walls, view, viewportSize])
+  }, [canvasTheme, grid, hiddenAreaKeys, imageRevision, objects, tiles, walls, view, viewportSize])
 
   return (
     <main className="app">
       <div className="toolbar" aria-label="Editor tools">
-        <div className="toolbar-group" aria-label="Paint tools">
-          <span className="toolbar-label">Paint</span>
+        <div className="toolbar-group tab-controls" aria-label="Editor mode">
+          <span className="toolbar-label">Mode</span>
           <button
             type="button"
-            className={toolMode === 'wall' ? 'active' : undefined}
-            onClick={() => setToolMode('wall')}
+            className={editorTab === 'layout' ? 'active' : undefined}
+            onClick={() => setEditorTab('layout')}
           >
-            Wall
+            Layout
           </button>
           <button
             type="button"
-            className={toolMode === 'floor' ? 'active' : undefined}
-            onClick={() => setToolMode('floor')}
+            className={editorTab === 'customize' ? 'active' : undefined}
+            onClick={() => setEditorTab('customize')}
           >
-            Floor
+            Customize
           </button>
-          <div className="segmented-control" aria-label="Paint operation">
+        </div>
+        {editorTab === 'layout' && (
+          <div className="toolbar-group" aria-label="Paint tools">
+            <span className="toolbar-label">Paint</span>
             <button
               type="button"
-              className={paintOperation === 'add' ? 'active' : undefined}
-              onClick={() => setPaintOperation('add')}
+              className={toolMode === 'wall' ? 'active' : undefined}
+              onClick={() => setToolMode('wall')}
             >
-              +
+              Wall
             </button>
             <button
               type="button"
-              className={paintOperation === 'subtract' ? 'active' : undefined}
-              onClick={() => setPaintOperation('subtract')}
+              className={toolMode === 'floor' ? 'active' : undefined}
+              onClick={() => setToolMode('floor')}
             >
-              -
+              Floor
+            </button>
+            <div className="segmented-control" aria-label="Paint operation">
+              <button
+                type="button"
+                className={paintOperation === 'add' ? 'active' : undefined}
+                onClick={() => setPaintOperation('add')}
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className={paintOperation === 'subtract' ? 'active' : undefined}
+                onClick={() => setPaintOperation('subtract')}
+              >
+                -
+              </button>
+            </div>
+            <button
+              type="button"
+              className={toolMode === 'fill' ? 'active' : undefined}
+              onClick={() => setToolMode('fill')}
+            >
+              Fill
+            </button>
+            <label>
+              Area
+              <input
+                className="area-name-input"
+                type="text"
+                value={areaName}
+                onChange={(event) => setAreaName(event.target.value)}
+              />
+            </label>
+            <label>
+              Color
+              <input
+                className="color-input"
+                type="color"
+                value={areaColor}
+                onChange={(event) => setAreaColor(event.target.value)}
+              />
+            </label>
+          </div>
+        )}
+
+        {editorTab === 'layout' && (
+          <div className="toolbar-group clear-controls" aria-label="Clear controls">
+            <button
+              type="button"
+              onClick={() => {
+                pushHistory()
+                setTiles([])
+                setWalls([])
+                setObjects([])
+                setHiddenAreaKeys(new Set())
+                setAreaDrafts({})
+              }}
+            >
+              Clear
             </button>
           </div>
-          <button
-            type="button"
-            className={toolMode === 'fill' ? 'active' : undefined}
-            onClick={() => setToolMode('fill')}
-          >
-            Fill
-          </button>
-          <label>
-            Area
-            <input
-              className="area-name-input"
-              type="text"
-              value={areaName}
-              onChange={(event) => setAreaName(event.target.value)}
-            />
-          </label>
-          <label>
-            Color
-            <input
-              className="color-input"
-              type="color"
-              value={areaColor}
-              onChange={(event) => setAreaColor(event.target.value)}
-            />
-          </label>
-        </div>
+        )}
 
-        <div className="toolbar-group clear-controls" aria-label="Clear controls">
-          <button
-            type="button"
-            onClick={() => {
-              pushHistory()
-              setTiles([])
-              setWalls([])
-              setHiddenAreaKeys(new Set())
-              setAreaDrafts({})
-            }}
-          >
-            Clear
-          </button>
-        </div>
-
-        <div className="toolbar-group generator-controls" aria-label="Generate Layout panel">
+        {editorTab === 'layout' && (
+          <div className="toolbar-group generator-controls" aria-label="Generate Layout panel">
           <span className="toolbar-label">Generate Layout</span>
           <label>
             Seed
@@ -1757,62 +2268,65 @@ function App() {
           <button type="button" onClick={handleGenerateLayout}>
             Generate
           </button>
-        </div>
+          </div>
+        )}
 
-        <div className="toolbar-group map-controls" aria-label="Map size controls">
-          <span className="toolbar-label">Map</span>
-          <label>
-            Width
-            <input
-              type="number"
-              min={MIN_GRID_SIZE}
-              max={MAX_GRID_SIZE}
-              value={grid.width}
-              onChange={(event) =>
-                handleGridNumberChange(
-                  'width',
-                  Number(event.target.value),
-                  MIN_GRID_SIZE,
-                  MAX_GRID_SIZE,
-                )
-              }
-            />
-          </label>
-          <label>
-            Height
-            <input
-              type="number"
-              min={MIN_GRID_SIZE}
-              max={MAX_GRID_SIZE}
-              value={grid.height}
-              onChange={(event) =>
-                handleGridNumberChange(
-                  'height',
-                  Number(event.target.value),
-                  MIN_GRID_SIZE,
-                  MAX_GRID_SIZE,
-                )
-              }
-            />
-          </label>
-          <label>
-            Cell Size
-            <input
-              type="number"
-              min={MIN_CELL_SIZE}
-              max={MAX_CELL_SIZE}
-              value={grid.cellSize}
-              onChange={(event) =>
-                handleGridNumberChange(
-                  'cellSize',
-                  Number(event.target.value),
-                  MIN_CELL_SIZE,
-                  MAX_CELL_SIZE,
-                )
-              }
-            />
-          </label>
-        </div>
+        {editorTab === 'layout' && (
+          <div className="toolbar-group map-controls" aria-label="Map size controls">
+            <span className="toolbar-label">Map</span>
+            <label>
+              Width
+              <input
+                type="number"
+                min={MIN_GRID_SIZE}
+                max={MAX_GRID_SIZE}
+                value={grid.width}
+                onChange={(event) =>
+                  handleGridNumberChange(
+                    'width',
+                    Number(event.target.value),
+                    MIN_GRID_SIZE,
+                    MAX_GRID_SIZE,
+                  )
+                }
+              />
+            </label>
+            <label>
+              Height
+              <input
+                type="number"
+                min={MIN_GRID_SIZE}
+                max={MAX_GRID_SIZE}
+                value={grid.height}
+                onChange={(event) =>
+                  handleGridNumberChange(
+                    'height',
+                    Number(event.target.value),
+                    MIN_GRID_SIZE,
+                    MAX_GRID_SIZE,
+                  )
+                }
+              />
+            </label>
+            <label>
+              Cell Size
+              <input
+                type="number"
+                min={MIN_CELL_SIZE}
+                max={MAX_CELL_SIZE}
+                value={grid.cellSize}
+                onChange={(event) =>
+                  handleGridNumberChange(
+                    'cellSize',
+                    Number(event.target.value),
+                    MIN_CELL_SIZE,
+                    MAX_CELL_SIZE,
+                  )
+                }
+              />
+            </label>
+          </div>
+        )}
 
         <div className="toolbar-group file-controls" aria-label="File controls">
           <span className="toolbar-label">File</span>
@@ -1893,7 +2407,108 @@ function App() {
             Fit
           </button>
         </div>
-        {areaGroups.length > 0 && (
+        {editorTab === 'customize' && (
+          <div className="asset-catalog" aria-label="Sprite catalog">
+            <div className="catalog-header">
+              <div className="asset-catalog-title">Customize</div>
+              <div className="catalog-tools">
+                <div className="segmented-control" aria-label="Customize mode">
+                  <button
+                    type="button"
+                    className={customizeMode === 'floor' ? 'active' : undefined}
+                    onClick={() => {
+                      setCustomizeMode('floor')
+                      setSelectedAssetId(
+                        catalogAssets.find((asset) => asset.kind === 'floor')?.id ?? '',
+                      )
+                    }}
+                  >
+                    Floor
+                  </button>
+                  <button
+                    type="button"
+                    className={customizeMode === 'object' ? 'active' : undefined}
+                    onClick={() => {
+                      setCustomizeMode('object')
+                      setSelectedAssetId(
+                        catalogAssets.find((asset) => asset.kind === 'object')?.id ?? '',
+                      )
+                    }}
+                  >
+                    Object
+                  </button>
+                  <button
+                    type="button"
+                    className={customizeMode === 'wall' ? 'active' : undefined}
+                    onClick={() => setCustomizeMode('wall')}
+                  >
+                    Wall
+                  </button>
+                </div>
+                {customizeMode === 'wall' && (
+                  <label className="catalog-number-label">
+                    Wall Height
+                    <input
+                      type="number"
+                      min={8}
+                      max={240}
+                      value={wallHeight}
+                      onChange={(event) =>
+                        setWallHeight(
+                          clamp(Math.round(Number(event.target.value) || 8), 8, 240),
+                        )
+                      }
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+            {customizeMode === 'wall' ? (
+              <div className="wall-tool-hint">Click an edge to place or update a wall.</div>
+            ) : (
+              <>
+                {catalogByZone.every((group) =>
+                  (customizeMode === 'floor' ? group.floors : group.objects).length === 0,
+                ) && (
+                  <div className="wall-tool-hint">
+                    No PNG assets found for this mode.
+                  </div>
+                )}
+                {catalogByZone.map((group) => {
+                  const assets = customizeMode === 'floor' ? group.floors : group.objects
+
+                  if (assets.length === 0) {
+                    return null
+                  }
+
+                  return (
+                    <section key={group.zone} className="asset-zone">
+                      <div className="asset-zone-title">{group.zone}</div>
+                      <div className="asset-grid">
+                        {assets.map((asset) => (
+                          <button
+                            key={asset.id}
+                            type="button"
+                            className={
+                              selectedAssetId === asset.id ? 'asset-card active' : 'asset-card'
+                            }
+                            onClick={() => setSelectedAssetId(asset.id)}
+                          >
+                            <span className="asset-thumb">
+                              <img src={asset.sprite} alt="" draggable={false} />
+                            </span>
+                            <span>{asset.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })}
+              </>
+            )}
+          </div>
+        )}
+        {editorTab === 'layout' && areaGroups.length > 0 && (
           <div className="area-legend" aria-label="Painted area legend">
             <div className="area-legend-title">Areas</div>
             {areaGroups.map((group) => {
