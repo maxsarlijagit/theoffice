@@ -10,7 +10,7 @@
     "server": "node --watch server/index.js",
     "client": "vite",
     "editor": "npm run dev --prefix iso-layout-editor",
-    "dev": "npm run server & npm run client",
+    "dev": "start /B npm run server & npm run client",
     "build:atlas": "node scripts/build-atlas.js"
   },
   "dependencies": {
