@@ -11,13 +11,12 @@ Crear una oficina virtual isometrica, primero en modo local y luego preparada pa
 - Frontend: Vite + Phaser.
 - Entrada principal del juego: `src/main.js`.
 - HTML principal: `index.html`.
-- Layout del mapa: `theoffice_grid.json`.
-- Backend/multijugador inicial: `server/index.js`, `server/discord.js`.
-- Tests de servidor/WebSocket: `tests/game.test.js`.
+- Layout del mapa: `maps/map1.json`.
+- Editor de mapas: `iso-layout-editor/`.
 - Scripts utiles:
   - `npm run dev`
   - `npm run build`
-  - `npm run server`
+  - `npm run editor`
 
 ## Estado del juego
 
@@ -73,7 +72,7 @@ Revisar y probar esa implementacion antes de ampliarla.
 - Si el radio del collider de pared es muy grande, las puertas pueden sentirse estrechas.
 - Si las paredes se generan en todos los bordes entre zonas, algunas fronteras irregulares pueden quedar visualmente densas.
 - Los objetos actualmente son placeholders; conviene moverlos luego a un archivo de datos separado.
-- El servidor todavia tiene su propia idea de tilemap/zones en los tests, asi que hay que alinear cliente y servidor antes del multijugador real.
+- Si se retoma multijugador, hacerlo como una capa nueva alineada con `maps/map1.json`; el prototipo WebSocket/Canvas viejo fue retirado del flujo activo.
 
 ## Siguiente paso recomendado
 

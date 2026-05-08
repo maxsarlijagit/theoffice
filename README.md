@@ -1,11 +1,13 @@
-﻿# The Office - Multiplayer Game
+# The Office - Phaser 4
 
-A real-time multiplayer office simulation with proximity chat, zone-based voice, and cyberpunk aesthetics.
+Isometric office prototype built with Phaser 4 and Vite.
 
 ## Stack
-- Backend: Node.js + Express + WebSocket (ws)
-- Frontend: Vanilla Canvas 2D
-- Renderer: Procedural pixel art sprites
+
+- Frontend: Vite
+- Game runtime: Phaser 4
+- Map data: `maps/map1.json`
+- Map editor: `iso-layout-editor/`
 
 ## Setup
 
@@ -14,36 +16,24 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 in browser.
+Open http://localhost:5173 in the browser.
 
 ## Controls
+
 - WASD or Arrow keys: Move
-- Chat: Type message + Enter
 
-## Environment Variables
-
-```bash
-# Discord Bot (optional)
-DISCORD_BOT_TOKEN=
-DISCORD_VOICE_OFFICE=
-DISCORD_VOICE_FOCUS_ROOM=
-DISCORD_VOICE_CAFETERIA=
-DISCORD_VOICE_ARCADE=
-DISCORD_VOICE_STUDIO=
-```
-
-## Deploy to Railway
+## Useful Scripts
 
 ```bash
-railway init
-railway up
+npm run dev      # Phaser game
+npm run build    # Production build
+npm run preview  # Preview built app
+npm run editor   # Map editor
 ```
-
-Set PORT env var in Railway.
 
 ## Features
-- 5 zones: OFFICE, FOCUS ROOM, CAFETERIA, ARCADE, STUDIO
-- Proximity chat (4 tile radius)
-- Global chat panel
-- Avatar animation
-- Minimap with player dots
+
+- Isometric tile rendering
+- Area-based zone colors
+- Player movement with foot-point collision
+- Walls, doors, furniture blockers, and depth sorting
