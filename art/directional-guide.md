@@ -19,68 +19,29 @@ Cada sprite de 32x32 píxeles representa una de las 8 direcciones cardinales e i
 
 ---
 
-## 🚶 Dinámica del Walk Cycle (Frame de Contacto)
+## 🏃 Walk Cycle Animation Logic (4-Frame System)
 
-Para estas 8 direcciones base, se define el **Frame 01 (Contact)**:
+To maintain consistency and fluidity, the Avatar Zero uses a **4-Frame Walk Cycle** that balances simplicity with natural movement:
 
-1. **Piernas**: Una pierna está extendida hacia adelante (contacto con el suelo) y la otra hacia atrás.
-2. **Brazos**: El brazo opuesto a la pierna delantera se mueve hacia adelante para balanceo.
-3. **Cabeza**: Ligera inclinación hacia la dirección del movimiento.
-4. **Hombros**: Rotación sutil para acompañar el movimiento de los brazos.
+| Frame | Pose | Logic | Visual Effect |
+| :--- | :--- | :--- | :--- |
+| **01** | **Contact L** | Left leg forward (max), Right back. Arms opposite. | Main stride start. |
+| **02** | **Passing 1** | Legs neutral/crossing. Torso drops 1px. | The "dip" in the walk. |
+| **03** | **Contact R** | Right leg forward (max), Left back. Arms opposite. | Middle of stride. |
+| **04** | **Passing 2** | Legs neutral/crossing. Torso drops 1px. | Second dip. |
 
----
-
-## 💡 Iluminación Direccional
-
-La fuente de luz es **Top-Left (Arriba-Izquierda)**. Esto afecta a cada dirección de forma única:
-
-- **S / SE / SW**: Pecho y frente de la cara bien iluminados. Sombra cae a la derecha/atrás.
-- **E / W**: El lado izquierdo del cuerpo siempre recibe más luz que el derecho.
-- **N / NE / NW**: La espalda recibe luz principalmente en el hombro izquierdo.
+### 🛠️ Key Technical Rules for Animation:
+1. **Vertical Bounce**: The character drops **1 pixel** on the "Passing" frames (02 & 04).
+2. **Arm Swing**: Arms should always move in the opposite direction of the legs to maintain balance.
+3. **Head Tilt**: A subtle 1px tilt toward the leading leg on "Contact" frames adds personality.
+4. **Lighting**: Keep the Top-Left light source fixed regardless of the character's orientation.
 
 ---
 
-## 📏 Alineación (Anchor Point)
+## 🛠️ Sprite Synthesizer Tool
 
-Todos los sprites deben mantener el **Anchor Pixel** en `(16, 31)` (base central de los pies). 
-
----
-
-## 🛠️ Lógica de Píxeles por Dirección (Referencia Técnica)
-
-Como no fue posible generar la imagen de referencia por límites de cuota, aquí tienes la lógica de píxeles para construir cada frame de **Contacto**:
-
-### 1. S (Abajo)
-- **Cabeza**: Círculo de 8px centrado en X=16.
-- **Torso**: Rectángulo de 9x10px.
-- **Pierna Izq (Adelante)**: Baja hasta Y=31, pie apoyado plano.
-- **Pierna Der (Atrás)**: Sube hasta Y=29, punta del pie tocando el suelo.
-
-### 2. SE (Abajo-Derecha)
-- **Eje**: Isométrico 2:1.
-- **Cabeza**: Rotada 45° (vista 3/4). Oreja izquierda visible.
-- **Torso**: Se ve el pecho y el lateral izquierdo.
-- **Pies**: Alineados en la diagonal isométrica. Pie derecho adelantado hacia abajo-derecha.
-
-### 3. E (Derecha)
-- **Ancho**: Reducido a 8-10px (perfil).
-- **Cabeza**: Solo se ve el perfil.
-- **Brazo**: El brazo derecho oculta gran parte del torso.
-- **Pies**: Uno delante de otro en línea recta vertical (desde esta perspectiva).
-
-### 4. NE (Arriba-Derecha)
-- **Espalda**: Visible en 3/4.
-- **Cabeza**: Se ve la nuca y la oreja derecha.
-- **Luz**: Solo ilumina el borde izquierdo (hombro).
-
-### 5. N (Arriba)
-- **Simetría**: Similar a **S** pero sin detalles faciales.
-- **Pies**: Los talones están hacia arriba, las puntas hacia el fondo (Y=28/29).
+Para generar y exportar estos sprites con precisión técnica, utiliza el sintetizador local:
+👉 [walk_cycle_synthesizer.html](file:///e:/Formación%20Technical%20Artist/Repo%20Github/theoffice/art/walk_cycle_synthesizer.html)
 
 > [!TIP]
-> Para las direcciones **NW, W, SW**, simplemente utiliza la versión reflejada (mirror) de **NE, E, SE** y ajusta la iluminación (la luz siempre debe venir de la izquierda, por lo que el mirror requiere un repintado de sombras).
-
----
-
-> [!WARNING]
-> La generación automática de `avatar_zero_8_directions.png` falló debido a límites de cuota de la IA. Se recomienda seguir esta guía técnica para el diseño manual.
+> Al exportar desde el sintetizador, obtendrás una hoja de sprites de **128x256 px** (4 frames horizontales x 8 direcciones verticales), lista para ser procesada o usada directamente en el motor.
