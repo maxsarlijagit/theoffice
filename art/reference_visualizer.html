@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar Zero - 8 Directions Reference Visualizer</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --panel: #161b22;
+            --text: #c9d1d9;
+            --accent: #58a6ff;
+            --secondary: #21262d;
+            --border: #30363d;
+            --success: #238636;
+            --highlight-rgba: rgba(88, 166, 255, 0.15);
+            
+            /* Avatar Palette */
+            --skin-base: #F1C27D;
+            --skin-shadow: #E0AC69;
+            --skin-highlight: #FFDBAC;
+            --skin-dark: #C68642;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            margin: 0;
+            line-height: 1.5;
+        }
+        .container {
+            background: var(--panel);
+            padding: 2.5rem;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            max-width: 1100px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+        }
+        header {
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .title-area h1 { 
+            color: var(--accent); 
+            margin: 0; 
+            font-size: 2rem;
+            letter-spacing: -0.5px;
+        }
+        .subtitle {
+            color: #8b949e;
+            font-size: 1rem;
+            margin-top: 4px;
+        }
+        
+        /* Master Preview Section */
+        .preview-section {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 32px;
+            margin-bottom: 3rem;
+            background: linear-gradient(145deg, #1c2128, #161b22);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .master-canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            border-radius: 12px;
+            padding: 40px;
+            border: 2px solid #30363d;
+            position: relative;
+            overflow: hidden;
+        }
+        .master-canvas-container::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(#30363d 1px, transparent 1px);
+            background-size: 16px 16px;
+            opacity: 0.2;
+        }
+        #master-canvas {
+            width: 320px;
+            height: 320px;
+            image-rendering: pixelated;
+            z-index: 1;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.8));
+        }
+        .master-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .current-label {
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--accent);
+            margin: 0;
+            line-height: 1;
+        }
+        .current-desc {
+            color: #f0f6fc;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        .tech-specs {
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 0.8rem;
+            color: #8b949e;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* Grid Section */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .grid { grid-template-columns: repeat(2, 1fr); }
+            .preview-section { grid-template-columns: 1fr; }
+        }
+        .direction-card {
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .direction-card:hover {
+            border-color: var(--accent);
+            background: var(--highlight-rgba);
+            transform: translateY(-4px);
+        }
+        .direction-card.active {
+            border-color: var(--accent);
+            background: var(--highlight-rgba);
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.2);
+        }
+        .grid canvas {
+            background: #000;
+            image-rendering: pixelated;
+            width: 128px;
+            height: 128px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #30363d;
+        }
+        .label { 
+            font-weight: 700; 
+            font-size: 1.2rem; 
+            display: block; 
+            color: #f0f6fc;
+        }
+        .coords { 
+            font-size: 0.8rem; 
+            color: #8b949e; 
+        }
+
+        .status-bar {
+            margin-top: 3rem;
+            font-size: 0.85rem;
+            color: #8b949e;
+            text-align: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+        .info-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="title-area">
+                <h1>🧭 Avatar Zero Synthesizer</h1>
+                <p class="subtitle">High-Fidelity 8-Direction Reference & Lighting Guide</p>
+            </div>
+            <div class="info-badge" style="background: var(--accent); color: #000;">V1.2 Stable</div>
+        </header>
+        
+        <div class="preview-section">
+            <div class="master-canvas-container">
+                <canvas id="master-canvas" width="32" height="32"></canvas>
+            </div>
+            <div class="master-info">
+                <span class="info-badge" style="background: var(--success); color: white;">Synthetic Reference</span>
+                <h2 id="display-id" class="current-label">S</h2>
+                <p id="display-name" class="current-desc">South (Down)</p>
+                <div class="tech-specs" id="display-specs">
+                    • 32x32px Buffer<br>
+                    • ISO 2:1 Perspective<br>
+                    • Light: Top-Left (135°)<br>
+                    • Pose: Contact Frame
+                </div>
+            </div>
+        </div>
+
+        <div class="grid" id="main-grid">
+            <!-- Directions will be rendered here -->
+        </div>
+
+        <div class="status-bar">
+            Character Architecture: 8px Head | 9px Torso | 10px Legs • Anchor: (16, 31)
+        </div>
+    </div>
+
+    <script>
+        const directions = [
+            { id: 'S', name: 'South (Down)', angle: 0 },
+            { id: 'SE', name: 'South-East', angle: 45 },
+            { id: 'E', name: 'East (Right)', angle: 90 },
+            { id: 'NE', name: 'North-East', angle: 135 },
+            { id: 'N', name: 'North (Up)', angle: 180 },
+            { id: 'NW', name: 'North-West', angle: 225 },
+            { id: 'W', name: 'West (Left)', angle: 270 },
+            { id: 'SW', name: 'South-West', angle: 315 }
+        ];
+
+        const grid = document.getElementById('main-grid');
+        const masterCanvas = document.getElementById('master-canvas');
+        const masterCtx = masterCanvas.getContext('2d');
+        const displayId = document.getElementById('display-id');
+        const displayName = document.getElementById('display-name');
+        
+        const spriteSize = 32;
+        const palette = {
+            base: '#F1C27D',
+            shadow: '#E0AC69',
+            highlight: '#FFDBAC',
+            outline: '#C68642',
+            dark: '#8d5524'
+        };
+
+        function drawAvatar(ctx, angleDeg) {
+            ctx.clearRect(0, 0, spriteSize, spriteSize);
+            ctx.imageSmoothingEnabled = false;
+
+            const rad = (angleDeg * Math.PI) / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+
+            const cx = 16;
+            const cy = 31; // Anchor base
+
+            // 1. Shadow on ground
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - 1, 7, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. Legs (10px) - Simplified perspective logic
+            // One leg forward, one back for contact pose
+            const legW = 3;
+            const legH = 10;
+            
+            // Back Leg
+            ctx.fillStyle = palette.shadow;
+            ctx.fillRect(cx - (sin * 2) - 3, cy - legH, legW, legH);
+            
+            // Front Leg
+            ctx.fillStyle = palette.base;
+            ctx.fillRect(cx + (sin * 2) + 1, cy - legH, legW, legH);
+
+            // 3. Torso (9px)
+            const torsoW = 10;
+            const torsoH = 9;
+            const tx = cx - 5;
+            const ty = cy - legH - torsoH;
+            
+            // Lighting based on Top-Left (approx 135 deg)
+            const lightDot = Math.cos(rad - (135 * Math.PI / 180));
+            
+            ctx.fillStyle = lightDot > 0 ? palette.base : palette.shadow;
+            ctx.fillRect(tx, ty, torsoW, torsoH);
+            
+            // Highlight edge (Top-Left)
+            ctx.fillStyle = palette.highlight;
+            ctx.fillRect(tx, ty, 2, torsoH); // Left edge
+            ctx.fillRect(tx, ty, torsoW, 2); // Top edge
+
+            // 4. Arms (Simplified balance)
+            ctx.fillStyle = palette.shadow;
+            // Back arm
+            ctx.fillRect(cx - 6, ty + 1, 2, 8);
+            // Front arm
+            ctx.fillStyle = palette.base;
+            ctx.fillRect(cx + 4, ty + 1, 2, 8);
+
+            // 5. Head (8x8px)
+            const hx = cx - 4;
+            const hy = ty - 8;
+            
+            ctx.fillStyle = lightDot > 0.5 ? palette.highlight : (lightDot > -0.5 ? palette.base : palette.shadow);
+            ctx.fillRect(hx, hy, 8, 8);
+            
+            // Face details (Eyes/Ears based on angle)
+            ctx.fillStyle = palette.dark;
+            if (angleDeg < 90 || angleDeg > 270) { // Facing South-ish
+                const eyeX = cx + sin * 3;
+                const eyeY = hy + 4;
+                ctx.fillRect(eyeX - 2, eyeY, 1, 1);
+                ctx.fillRect(eyeX + 1, eyeY, 1, 1);
+            }
+            
+            // Top-Left highlight on head
+            ctx.fillStyle = palette.highlight;
+            ctx.fillRect(hx, hy, 3, 2);
+        }
+
+        function updateMaster(dir) {
+            displayId.textContent = dir.id;
+            displayName.textContent = dir.name;
+            
+            document.querySelectorAll('.direction-card').forEach(c => {
+                c.classList.toggle('active', c.dataset.id === dir.id);
+            });
+
+            drawAvatar(masterCtx, dir.angle);
+        }
+
+        function init() {
+            grid.innerHTML = '';
+            directions.forEach(dir => {
+                const card = document.createElement('div');
+                card.className = 'direction-card';
+                card.dataset.id = dir.id;
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = spriteSize;
+                canvas.height = spriteSize;
+                const ctx = canvas.getContext('2d');
+                
+                drawAvatar(ctx, dir.angle);
+
+                card.innerHTML += `
+                    <span class="label">${dir.id}</span>
+                    <span class="coords">${dir.name}</span>
+                `;
+                card.prepend(canvas);
+                
+                card.onclick = () => updateMaster(dir);
+                grid.appendChild(card);
+            });
+
+            updateMaster(directions[0]);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
