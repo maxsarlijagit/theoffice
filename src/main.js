@@ -1,6 +1,14 @@
 import Phaser from 'phaser';
 import { generateAvatar } from './spriteGenerator.js';
 
+// =====================================================================
+// ⚙️ CONFIGURACIÓN DE DESARROLLO (Ajustar según necesidad)
+// =====================================================================
+const DEV_CONFIG = {
+    DEBUG_LOAD_DELAY: 3000,    // Milisegundos de espera (3000 para testear UX, 0 para iteración rápida)
+    ENABLE_ATLAS: false,    // Cambiar a true cuando los archivos atlas.png/json estén listos
+};
+
 // ── Isometric projection constants ──────────────────────────────────────────
 const TILE_W = 64;   // horizontal span of one diamond tile (px)
 const TILE_H = 32;   // vertical span of one diamond tile (px)
@@ -43,68 +51,61 @@ class PreloaderScene extends Phaser.Scene {
   }
 
   init(data) {
-    // Guardamos los datos que manda el WebSocket (mapa, jugadores, ID)
-    // para pasárselos a la escena isométrica cuando termine de cargar.
     this.wsData = data;
   }
 
   preload() {
-    const width = this.cameras.main.width;
-    const height = this.cameras.main.height;
+    const { width, height } = this.cameras.main;
 
-    // UI: Texto de carga
+    // UI: Texto de estado
     const loadingText = this.make.text({
         x: width / 2,
         y: height / 2 - 50,
-        text: 'Cargando The Office...',
-        style: { fontFamily: '"JetBrains Mono", monospace', fontSize: '20px', fill: '#ffffff' }
-    });
-    loadingText.setOrigin(0.5, 0.5);
+        text: 'Sincronizando con la oficina...',
+        style: { fontFamily: '"JetBrains Mono", monospace', fontSize: '18px', fill: '#ffffff' }
+    }).setOrigin(0.5);
 
-    // UI: Contenedor y barra de progreso
-    const progressBox = this.add.graphics();
+    // UI: Barra de progreso
+    const progressBox = this.add.graphics().fillStyle(0x222222, 0.8).fillRect(width / 2 - 160, height / 2 - 20, 320, 40);
     const progressBar = this.add.graphics();
     
-    progressBox.fillStyle(0x222222, 0.8);
-    progressBox.fillRect(width / 2 - 160, height / 2 - 20, 320, 40);
-
-    // Eventos de carga
     this.load.on('progress', (value) => {
-        progressBar.clear();
-        progressBar.fillStyle(0x534AB7, 1); // Violeta de The Office
-        progressBar.fillRect(width / 2 - 150, height / 2 - 10, 300 * value, 20);
+        progressBar.clear().fillStyle(0x534AB7, 1).fillRect(width / 2 - 150, height / 2 - 10, 300 * value, 20);
     });
 
-    // --- ORIGINAL (Descomentar para producción) ---
-    // this.load.on('complete', () => {
-    //     progressBar.destroy();
-    //     progressBox.destroy();
-    //     loadingText.destroy();
-        
-    //     // Pasamos a la escena principal enviando los datos del servidor intactos
-    //     this.scene.start('IsoScene', this.wsData);
-    // });
+    // Manejo de errores para que el juego NO se rompa si falta el Atlas
+    this.load.on('loaderror', (fileObj) => {
+        console.warn(`Error cargando asset: ${fileObj.key}. Continuando ejecución...`);
+    });
 
-    // --- TEST MODE: Delay de 3 segundos ---
     this.load.on('complete', () => {
-        // Aprovechamos para darle feedback visual de que ya cargó todo
-        loadingText.setText('¡Listo! Abriendo puertas...');
-        
-        // El progreso ya está en 1 (100%), lo dejamos ahí un ratito
-
-        // Retrasamos el inicio de la siguiente escena por 3000 milisegundos (3 segundos)
-        this.time.delayedCall(3000, () => {
+        const transition = () => {
             progressBar.destroy();
             progressBox.destroy();
             loadingText.destroy();
-            
-            // Pasamos a la escena principal enviando los datos del servidor intactos
             this.scene.start('IsoScene', this.wsData);
-        });
+        };
+
+        // Aplicamos el delay parametrizable
+        if (DEV_CONFIG.DEBUG_LOAD_DELAY > 0) {
+            loadingText.setText('Carga completa (Modo Debug)');
+            this.time.delayedCall(DEV_CONFIG.DEBUG_LOAD_DELAY, transition);
+        } else {
+            transition();
+        }
     });
 
-    // Carga de tu Texture Atlas
-    this.load.atlas('office_sprites', 'assets/sprites/atlas.png', 'assets/sprites/atlas.json');
+    // CARGA DE ASSETS
+    // 1. Datos del mapa (Crítico)
+    // Nota: Si el server ya mandó mapData en el init, técnicamente no necesitas cargarlo aquí,
+    // pero lo mantenemos si hay assets externos vinculados al mapa.
+    
+    // 2. Texture Atlas (Opcional)
+    if (DEV_CONFIG.ENABLE_ATLAS) {
+        this.load.atlas('office_sprites', 'assets/sprites/atlas.png', 'assets/sprites/atlas.json');
+    } else {
+        console.log("Texture Atlas deshabilitado por flag de desarrollo.");
+    }
   }
 }
 
