@@ -6,7 +6,7 @@ import { packAsync } from 'free-tex-packer-core';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.join(__dirname, '..');
 const INPUT_DIR = path.join(ROOT_DIR, 'client/art_raw/');
-const OUTPUT_DIR = path.join(ROOT_DIR, 'client/public/assets/sprites/');
+const OUTPUT_DIR = path.join(ROOT_DIR, 'public/assets/sprites/');
 
 // Opciones críticas para mantener el Pixel-Perfect y el Anchor Point
 const PACKER_OPTIONS = {
