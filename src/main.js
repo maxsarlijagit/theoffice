@@ -34,6 +34,80 @@ const pressedKeys = new Set();
 let reconnectAttempts = 0;
 let joinParams = null;
 
+// =====================================================================
+// ── PANTALLA DE CARGA (PreloaderScene) ────────────────────────────
+// =====================================================================
+class PreloaderScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'PreloaderScene' });
+  }
+
+  init(data) {
+    // Guardamos los datos que manda el WebSocket (mapa, jugadores, ID)
+    // para pasárselos a la escena isométrica cuando termine de cargar.
+    this.wsData = data;
+  }
+
+  preload() {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    // UI: Texto de carga
+    const loadingText = this.make.text({
+        x: width / 2,
+        y: height / 2 - 50,
+        text: 'Cargando The Office...',
+        style: { fontFamily: '"JetBrains Mono", monospace', fontSize: '20px', fill: '#ffffff' }
+    });
+    loadingText.setOrigin(0.5, 0.5);
+
+    // UI: Contenedor y barra de progreso
+    const progressBox = this.add.graphics();
+    const progressBar = this.add.graphics();
+    
+    progressBox.fillStyle(0x222222, 0.8);
+    progressBox.fillRect(width / 2 - 160, height / 2 - 20, 320, 40);
+
+    // Eventos de carga
+    this.load.on('progress', (value) => {
+        progressBar.clear();
+        progressBar.fillStyle(0x534AB7, 1); // Violeta de The Office
+        progressBar.fillRect(width / 2 - 150, height / 2 - 10, 300 * value, 20);
+    });
+
+    // --- ORIGINAL (Descomentar para producción) ---
+    // this.load.on('complete', () => {
+    //     progressBar.destroy();
+    //     progressBox.destroy();
+    //     loadingText.destroy();
+        
+    //     // Pasamos a la escena principal enviando los datos del servidor intactos
+    //     this.scene.start('IsoScene', this.wsData);
+    // });
+
+    // --- TEST MODE: Delay de 3 segundos ---
+    this.load.on('complete', () => {
+        // Aprovechamos para darle feedback visual de que ya cargó todo
+        loadingText.setText('¡Listo! Abriendo puertas...');
+        
+        // El progreso ya está en 1 (100%), lo dejamos ahí un ratito
+
+        // Retrasamos el inicio de la siguiente escena por 3000 milisegundos (3 segundos)
+        this.time.delayedCall(3000, () => {
+            progressBar.destroy();
+            progressBox.destroy();
+            loadingText.destroy();
+            
+            // Pasamos a la escena principal enviando los datos del servidor intactos
+            this.scene.start('IsoScene', this.wsData);
+        });
+    });
+
+    // Carga de tu Texture Atlas
+    this.load.atlas('office_sprites', 'assets/sprites/atlas.png', 'assets/sprites/atlas.json');
+  }
+}
+
 // ── Phaser Scene ─────────────────────────────────────────────────────────────
 class IsoScene extends Phaser.Scene {
   constructor() {
@@ -398,16 +472,18 @@ function handleMessage(msg) {
           height: window.innerHeight,
           backgroundColor: '#0d1117',
           pixelArt: true,
-          scene: [IsoScene],
+          // INICIAMOS PRIMERO EN LA PANTALLA DE CARGA
+          scene: [PreloaderScene, IsoScene], 
           scale: {
             mode: Phaser.Scale.RESIZE,
             autoCenter: Phaser.Scale.CENTER_BOTH,
           },
         });
-        game.scene.start('IsoScene', { mapData, players: msg.players, myId });
+        // Le pasamos los datos del WS a la PreloaderScene
+        game.scene.start('PreloaderScene', { mapData, players: msg.players, myId });
       } else {
-        game.scene.restart('IsoScene');
-        game.scene.start('IsoScene', { mapData, players: msg.players, myId });
+        game.scene.restart('PreloaderScene');
+        game.scene.start('PreloaderScene', { mapData, players: msg.players, myId });
       }
 
       renderMinimap();
@@ -416,18 +492,18 @@ function handleMessage(msg) {
 
     case 'state': {
       serverPlayers = msg.players;
-      if (activeScene) activeScene.applyServerState(msg.players);
+      if (activeScene && activeScene.scene.key === 'IsoScene') activeScene.applyServerState(msg.players);
       document.getElementById('player-count').textContent =
         `${msg.players.length} online`;
       break;
     }
 
     case 'player_joined':
-      if (activeScene) activeScene.addPlayer(msg.player);
+      if (activeScene && activeScene.scene.key === 'IsoScene') activeScene.addPlayer(msg.player);
       break;
 
     case 'player_left':
-      if (activeScene) activeScene.removePlayer(msg.playerId);
+      if (activeScene && activeScene.scene.key === 'IsoScene') activeScene.removePlayer(msg.playerId);
       break;
 
     case 'zone_enter':
@@ -436,7 +512,7 @@ function handleMessage(msg) {
 
     case 'chat':
       if (msg.global) addChatMessage(msg.from, msg.color, msg.message);
-      if (msg.proximity && activeScene && msg.playerId) {
+      if (msg.proximity && activeScene && activeScene.scene.key === 'IsoScene' && msg.playerId) {
         activeScene.spawnChatBubble(msg.playerId, msg.message);
       }
       break;
